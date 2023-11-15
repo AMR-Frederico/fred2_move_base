@@ -7,9 +7,57 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(ament_cmake_python REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(rclpy REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
+
+#------------------------------------------------------------------------------------------------------
+# C++ CONFIGURATION -----------------------------------------------------------------------------------
+include_directories(include)
+
+# c++ executable
+add_executable(odometry src/ticks2odom.cpp)
+ament_target_dependencies(odometry rclcpp)
+
+# install c++ executables
+install(TARGETS
+  odometry
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+#------------------------------------------------------------------------------------------------------
+# PYTHON CONFIGURATION --------------------------------------------------------------------------------
+# install Python modules
+ament_python_install_package(${PROJECT_NAME})
+
+# install Python executables
+install(PROGRAMS
+  fred2_move_base/scripts/joy_esp_interface.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  fred2_move_base/scripts/led_manager.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  fred2_move_base/scripts/path_publisher.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  fred2_move_base/scripts/position_control.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  fred2_move_base/scripts/safe_twist.py
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
