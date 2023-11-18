@@ -45,18 +45,13 @@ install(PROGRAMS
 )
 
 install(PROGRAMS
-  fred2_move_base/scripts/path_publisher.py
-  DESTINATION lib/${PROJECT_NAME}
-)
-
-install(PROGRAMS
-  fred2_move_base/scripts/position_control.py
-  DESTINATION lib/${PROJECT_NAME}
-)
-
-install(PROGRAMS
   fred2_move_base/scripts/safe_twist.py
   DESTINATION lib/${PROJECT_NAME}
+)
+
+install(DIRECTORY
+  config
+  DESTINATION share/${PROJECT_NAME}
 )
 
 if(BUILD_TESTING)
