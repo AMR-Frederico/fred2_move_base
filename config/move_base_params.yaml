@@ -1,9 +1,9 @@
 led_manager:
-  led_white: 10
-  led_blue: 50
-  led_yellow: 3
-  led_pink: 2
-  led_green: 1
-  led_orange: 4
-  led_red: 0
+  led_white: 0
+  led_blue: 5
+  led_yellow: 5
+  led_pink: 4
+  led_green: 3
+  led_orange: 6
+  led_red: 2
   led_black: -1
