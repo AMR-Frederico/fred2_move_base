@@ -3,6 +3,8 @@
 import rclpy
 import yaml
 import os
+import sys
+import threading
 
 from typing import Any, List, Optional
 
@@ -11,7 +13,7 @@ from rclpy.node import Node
 from rclpy.time import Duration, Time
 
 from rcl_interfaces.msg import Parameter
-from std_msgs.msg import Bool, Int16
+from std_msgs.msg import Bool, Int16, Float32
 from geometry_msgs.msg import PoseStamped, Pose2D
 
 # Parameters file (yaml)
@@ -41,6 +43,11 @@ LED_goal_reached = False
 
 goal_reached = False
 last_goal_reached = False       # Sinalization
+
+led_color = Int16()  # Publisher message
+
+# Check for cli_args 
+debug_mode = '--debug' in sys.argv
 
 class led_manager(Node): 
     
@@ -104,6 +111,11 @@ class led_manager(Node):
                                     'goal_manager/goal/reached', 
                                     self.goal_reached_callback, 
                                     10 )
+        
+        self.led_color_pub = self.create_publisher(Int16, 
+                                              '/cmd/led_strip/color', 
+                                              10 )
+        
 
     def get_colors(self):
         # Get index colors
@@ -193,14 +205,35 @@ class led_manager(Node):
  
 def main():
     
-    led_color = led_manager.pink
+    led_color.data = node.pink
+
+    if robot_state == 50: 
+        led_color.data = node.blue
+
+        if (LED_goal_reached == True) and (LED_goal_signal == True):
+            led_color.data = node.green
+
+        if (collision_detected == True): 
+            led_color.data = node.orange
+    
+    if robot_state == 2: 
+        led_color.data = node.red
+    
+    node.led_color_pub.publish(led_color) 
+
+    if debug_mode: 
+        node.get_logger().info(f"\nLED_MANAGER:"
+                               f"Color: {led_color} \n"
+                               f"Collision alert: {collision_detected} \n"
+                               f"Stop command: {user_stop_command} \n"
+                               f"Robo tsate: {robot_state} \n"
+                               f"Goal reached: {LED_goal_reached} \n"
+                               f"Waypoint goal: {LED_goal_signal}")
 
 
 if __name__ == '__main__':
     
     rclpy.init()
-
-    # Put the parameters initial state
 
     node = led_manager(
         'led_manager_node', 
@@ -209,12 +242,20 @@ if __name__ == '__main__':
         enable_rosout=False, 
     )
 
-    main()
+    thread = threading.Thread(target=rclpy.spin, args=(node, ), daemon=True)
+    thread.start()
+
+    rate = node.create_rate(10)
 
     try: 
-        rclpy.spin(node)
+        while rclpy.ok(): 
+            
+            main()
+            print('oi')
+            rate.sleep()
+        
     except KeyboardInterrupt:
         pass
-    finally:
-        node.destroy_node()
-        rclpy.shutdown()
+
+    rclpy.shutdown()
+    thread.join()
