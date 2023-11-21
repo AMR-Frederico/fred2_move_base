@@ -251,7 +251,6 @@ if __name__ == '__main__':
         while rclpy.ok(): 
             
             main()
-            print('oi')
             rate.sleep()
         
     except KeyboardInterrupt:
