@@ -237,8 +237,8 @@ if __name__ == '__main__':
 
     node = led_manager(
         'led_manager_node', 
-        namespace='safe_twist',
-        cli_args=['--enable_debug'],
+        namespace='move_base',
+        cli_args=['--debug'],
         enable_rosout=False, 
     )
 
