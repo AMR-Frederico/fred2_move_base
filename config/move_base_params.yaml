@@ -1,9 +1,23 @@
 led_manager:
-  led_white: 0
-  led_blue: 5
-  led_yellow: 5
-  led_pink: 4
-  led_green: 3
-  led_orange: 6
-  led_red: 2
-  led_black: -1
+  WHITE: 0
+  BLUE: 5
+  YELLOW: 5
+  PINK: 4
+  GREEN: 3
+  ORANGE: 6
+  RED: 2
+  BLACK: -1
+
+  WAYPOINT_GOAL: 0  # Goals points that the robot must signal
+  GHOST_GOAL: 1
+
+  LED_ON_TIME: Duration(seconds=1) # It's also possible to specify nanoseconds
+
+
+safe_twist: 
+  SAFE_DISTANCE: 100    # distance in cm
+ 
+  MOTOR_BRAKE_FACTOR: -1
+ 
+  MAX_LINEAR_SPEED: 2
+  MAX_ANGULAR_SPEED: 20
