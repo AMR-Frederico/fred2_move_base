@@ -140,25 +140,46 @@ class SafeTwistNode(Node):
         self.MAX_LINEAR_SPEED = self.get_parameter('max_linear_speed').value
         self.MAX_ANGULAR_SPEED = self.get_parameter('max_angular_speed').value
 
+
+
     def rightUltrasonic_callback(self, distance): 
+        
         self.right_ultrasonic_distance = distance.data
     
+
+
+
     def leftUltrasonic_callback(self, distance): 
+        
         self.left_ultrasonic_distance = distance.data
 
+
+
     def backUltrasonic_callback(self, distance): 
+        
         self.back_ultrasonic_distance = distance.data
 
+
+
     def odom_callback(self, msg): 
+        
         self.robot_vel = Twist()
         self.robot_vel.linear.x = msg.twist.twist.linear.x
         self.robot_vel.angular.z = msg.twist.twist.angular.z
     
+
+
+
     def cmdVel_callback(self, velocity): 
+        
         self.cmd_vel = Twist()
         self.cmd_vel.linear.x = velocity.linear.x
         self.cmd_vel.angular.z = velocity.angular.z
     
+
+
+
+
     def abort_callback(self, user_command): 
 
         global robot_safety, user_abort_command
@@ -196,25 +217,32 @@ def main():
 
             stop_by_obstacle = True 
 
+
         if node.right_ultrasonic_distance < smallest_reading: 
             smallest_reading = node.right_ultrasonic_distance
+
 
         if node.left_ultrasonic_distance < smallest_reading: 
             smallest_reading = node.left_ultrasonic_distance
 
+
         if node.back_ultrasonic_distance < smallest_reading: 
             smallest_reading = node.back_ultrasonic_distance 
 
+
         braking_factor = smallest_reading/(2 * node.SAFE_DISTANCE)
+
 
         if braking_factor > 1: 
             braking_factor = 1
         
+
         if braking_factor < 0.5: 
             braking_factor = 0
         
     if robot_safety: 
         
+
         if stop_by_obstacle: 
             cmd_vel.linear.x = node.robot_vel.linear.x * node.MOTOR_BRAKE_FACTOR
             cmd_vel.angular.z = node.robot_vel.angular.z * node.MOTOR_BRAKE_FACTOR
@@ -223,14 +251,18 @@ def main():
             cmd_vel.linear.x = node.cmd_vel.linear.x * braking_factor
             cmd_vel.angular.z = node.cmd_vel.angular.z * braking_factor 
 
+
         if (cmd_vel.linear.x > node.MAX_LINEAR_SPEED): 
             cmd_vel.linear.x = node.MAX_LINEAR_SPEED
 
+
         if (cmd_vel.linear.x < - node.MAX_LINEAR_SPEED): 
             cmd_vel.linear.x = - node.MAX_LINEAR_SPEED 
-        
+
+
         if (cmd_vel.angular.z > node.MAX_ANGULAR_SPEED): 
             cmd_vel.angular.z = node.MAX_ANGULAR_SPEED
+
         
         if (cmd_vel.angular.z < - node.MAX_ANGULAR_SPEED): 
             cmd_vel.angular.z = - node.MAX_ANGULAR_SPEED
