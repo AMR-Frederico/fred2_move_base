@@ -18,11 +18,11 @@ The package efficiently manages the LED strip on the robot, dynamically adjustin
 ## Led manager node
 Determinate the LED strip's color basead on the robot state. Responsable for the waypoint sinalization. 
 
-**Type:** Python 
+**Type:** `python` 
 
-**Name:** led_manager
+**Name:** `led_manager`
 
-**Namespace:** safe_twist
+**Namespace:** `move_base`
 
 ### Topics
 **Publishers:**
@@ -38,6 +38,7 @@ Determinate the LED strip's color basead on the robot state. Responsable for the
 | :--------------------------------| :-------------------------  |
 |`safety/abort/colision_detection` |       `std_msgs/Bool`       |
 |   `safety/abort/user_command`    |       `std_msgs/Bool`       |
+|   `safety/ultrasonic/disabled`   |       `std_msgs/Bool`       |
 |`machine_states/main/robot_status`|     `std_msgs/Int16`        |
 |    `goal_manager/goal/current`   | `geometry_msgs/PoseStamped` |
 |   `goal_manager/goal/reached`    |       `std_msgs/Bool`       |
@@ -54,4 +55,57 @@ ros2 run fred2_move_base led_manager.py
 **Enable debug:**
 ```
 ros2 run fred2_move_base led_manager.py --debug
+```
+
+----- 
+## Safe Twist
+
+The node is responsible for managing the velocity commands of a robot based on safety constraints, including ultrasonic sensor readings and user commands.
+
+
+**Type:** `python` 
+
+**Name:** `safe_twist`
+
+**Namespace:** `move_base`
+
+### Topics
+**Publishers:**
+
+|               Name                |          Type        | 
+|:-----------------------           |:---------------------|
+|         `/cmd_vel/safe`           | `geometry_msgs/Twist`| 
+|    `safety/abort/user_command`    |   `std_msgs/Bool`    |
+| `safety/abort/colision_detection` |   `std_msgs/Bool`    |
+|    `safety/ultrasonic/disabled`   |   `std_msgs/Bool`    |
+
+<br>
+
+**Subscribers:**
+|             Name                 |             Type            |
+| :--------------------------------| :-------------------------  |
+| '/sensor/range/ultrasonic/right' |     `std_msgs/Float32`      |
+| '/sensor/range/ultrasonic/left'  |     `std_msgs/Float32`      |
+| '/sensor/range/ultrasonic/back'  |     `std_msgs/Float32`      |
+|             '/odom'              |     `nav_msgs/Odometry`     |
+|            '/cmd_vel'            |    `geometry_msgs/Twist`    |
+|   '/joy/controler/ps4/break'     |       `std_msgs/Bool`       |
+
+ <br>
+
+### Run 
+**Default:**
+
+```
+ros2 run fred2_move_base safe_twist.py
+```
+
+**Enable debug:**
+```
+ros2 run fred2_move_base safe_twist.py --debug
+```
+
+**Disable ultrasonics:**
+```
+ros2 run fred2_move_base safe_twist.py --disable_ultrasonics
 ```
