@@ -11,8 +11,6 @@ led_manager:
   WAYPOINT_GOAL: 0  # Goals points that the robot must signal
   GHOST_GOAL: 1
 
-  LED_ON_TIME: Duration(seconds=1) # It's also possible to specify nanoseconds
-
 
 safe_twist: 
   SAFE_DISTANCE: 100    # distance in cm
@@ -30,3 +28,13 @@ joy_esp_interface:
   MAX_VALUE_CONTROLER: 127
   
   DRIFT_ANALOG_TOLERANCE: 20
+
+
+odometry:
+  wheels_track: 0.3800  # distance in meters 
+  wheels_radius: 0.075  # distance in meters 
+  ticks_per_revolution: 7200 # 2400 * 3
+  base_link_offset: 0.08 # distance (in meters) between the base_footprint and base_link 
+
+
+  
