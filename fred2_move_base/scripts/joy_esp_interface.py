@@ -3,6 +3,7 @@
 import rclpy
 import threading
 import yaml
+import sys
 import os
 
 from typing import List, Optional
@@ -26,6 +27,9 @@ last_reset_odom = False
 
 change_mode = Bool()
 last_mode = False
+
+# Check for cli_args 
+debug_mode = '--debug' in sys.argv
 
 class JoyInterfaceNode(Node):
 
@@ -78,11 +82,6 @@ class JoyInterfaceNode(Node):
         self.create_subscription(Int16, 
                                  'joy/controler/ps4/cmd_vel/angular', 
                                  self.velAngular_callback, 
-                                 qos_profile)
-    
-        self.create_subscription(Int16, 
-                                 'joy/controler/ps4/break', 
-                                 self.breakCommand_callback, 
                                  qos_profile)
         
         self.create_subscription(Bool, 
@@ -162,14 +161,6 @@ class JoyInterfaceNode(Node):
 
 
 
-
-    def breakCommand_callback(self, break_msg): 
-
-        self.controler_buttons['X'] = break_msg.data
-        
-
-
-
     def manualMode_callback(self, manual_msg):
 
         self.manual_mode = manual_msg.data
@@ -221,6 +212,13 @@ def main():
     last_mode = node.switch_mode 
 
     node.switchMode_pub.publish(change_mode)
+
+    
+    if debug_mode: 
+        node.get_logger().info(f'Velocity -> linear:{vel_linear} | angular:{vel_angular}\n'
+                               f'Reset odometry -> {odom_reset.data}\n'
+                               f'Switch mode -> {change_mode.data}\n'
+                               f'Manual mode -> {node.manual_mode}')
 
 
 if __name__ == '__main__': 
