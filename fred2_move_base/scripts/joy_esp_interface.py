@@ -22,8 +22,7 @@ node_group = 'joy_esp_interface'
 
 cmd_vel = Twist()
 
-odom_reset = Bool()
-last_reset_odom = False
+last_reset_odom = 0
 
 change_mode = Bool()
 last_mode = False
@@ -44,7 +43,7 @@ class JoyInterfaceNode(Node):
     
     manual_mode = False
     switch_mode = False
-    reset_odom = False
+    reset_odom = 0
     
     def __init__(self, 
                  node_name: str, 
@@ -143,9 +142,11 @@ class JoyInterfaceNode(Node):
     def velLinear_callback(self, vel_msg): 
         
         if(abs(vel_msg.data) > self.DRIFT_ANALOG_TOLERANCE): 
+            
             self.controler_buttons['L_Y'] = vel_msg.data
-
+            
         else:
+            
             self.controler_buttons['L_Y'] = 0
     
 
@@ -154,9 +155,11 @@ class JoyInterfaceNode(Node):
     def velAngular_callback(self, vel_msg): 
 
         if(abs(vel_msg.data) > self.DRIFT_ANALOG_TOLERANCE):
+            
             self.controler_buttons['R_X'] = vel_msg.data
         
         else:
+            
             self.controler_buttons['R_X'] = 0
 
 
@@ -189,36 +192,49 @@ def main():
 
     # rule of three equating the maximum speed of the joy with that of the robot
     vel_angular = node.controler_buttons['R_X'] * (node.MAX_SPEED_ROBOT_ANGULAR / node.MAX_VALUE_CONTROLER)
-    vel_linear = node.controler_buttons['L_Y'] * (node.MAX_SPEED_ROBOT_LINEAR / node.MAX_VALUE_CONTROLER)  # Fix key here
+    vel_linear = node.controler_buttons['L_Y'] * (node.MAX_SPEED_ROBOT_LINEAR / node.MAX_VALUE_CONTROLER)
+    
 
     cmd_vel.linear.x = vel_linear
     cmd_vel.angular.z = -1 * vel_angular #? Correção de sentido? 
-
+    
     if node.manual_mode:
+        
         node.vel_pub.publish(cmd_vel)
 
+    
     #* reset odometry (circle buttom)
-    odom_reset.data = (node.reset_odom > last_reset_odom)
+    odom_reset = (node.reset_odom > last_reset_odom)
     last_reset_odom = node.reset_odom
 
-    if odom_reset.data: 
-        node.missionCompleted_pub.publish(False)
+    if odom_reset: 
+
+        missionCompleted_msg = Bool()
+        missionCompleted_msg.data = False
+        node.missionCompleted_pub.publish(missionCompleted_msg)
     
-    node.resetOdom_pub.publish(odom_reset)
-    node.goalsReset_pub.publish(odom_reset)
+
+    reset_msg = Bool()
+    reset_msg.data = odom_reset
+
+
+    node.resetOdom_pub.publish(reset_msg)
+    node.goalsReset_pub.publish(reset_msg)
+
 
     #* switch mode (triangle buttom)
     change_mode.data = node.switch_mode > last_mode
     last_mode = node.switch_mode 
 
+
     node.switchMode_pub.publish(change_mode)
 
     
     if debug_mode: 
-        node.get_logger().info(f'Velocity -> linear:{vel_linear} | angular:{vel_angular}\n'
-                               f'Reset odometry -> {odom_reset.data}\n'
-                               f'Switch mode -> {change_mode.data}\n'
-                               f'Manual mode -> {node.manual_mode}')
+        node.get_logger().info(f'Velocity -> linear:{vel_linear} | angular:{vel_angular}\n')
+        node.get_logger().info(f'Reset odometry -> {odom_reset}')
+        node.get_logger().info(f'Switch mode -> {change_mode.data}')
+        node.get_logger().info(f'Manual mode -> {node.manual_mode}')
 
 
 if __name__ == '__main__': 
