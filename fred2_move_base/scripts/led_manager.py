@@ -27,11 +27,24 @@ debug_mode = '--debug' in sys.argv
 
 class led_manager(Node): 
 
-    LED_ON_TIME: Duration(seconds=1) # It's also possible to specify nanoseconds
     
     robot_state = -5    # Robot state, random initial value
 
     last_goal_reached = False
+
+    last_stop_command = False
+    is_emergency_stop = True
+
+    collision_detected = False
+
+    ultrasonic_disabled = False
+
+    goal_pose = Pose2D()
+
+    led_goal_reached = False
+    led_goal_signal = False
+
+    LED_ON_TIME = Duration(seconds=1) # It's also possible to specify nanoseconds
 
     
     def __init__(self, 
@@ -55,6 +68,9 @@ class led_manager(Node):
         # Load parameters from YAML file
         self.load_params(led_path, led_group)
         self.get_colors()
+        
+        self.start_time = self.get_clock().now()
+
 
         self.collisionDetection_sub = self.create_subscription(
                                     Bool,
@@ -77,7 +93,7 @@ class led_manager(Node):
         self.currentGoal_sub = self.create_subscription(
                                     PoseStamped,
                                     'goal_manager/goal/current',
-                                    self.current_goal_callback, 
+                                    self.goal_current_callback, 
                                     10 )
         
         self.goalReached_sub = self.create_subscription(
@@ -111,6 +127,8 @@ class led_manager(Node):
         self.GHOST_GOAL = self.get_parameter('ghost_goal').value
 
 
+
+
     def load_params(self, path, group): 
         param_path = os.path.expanduser(path)
 
@@ -128,9 +146,12 @@ class led_manager(Node):
             self.get_logger().info(f'{param_name_lower}: {param_value}')
 
 
+
     # Imminent collision detected by the ultrasonic sensors 
-    def collision_callback(self, msg): 
+    def collision_callback(self, msg):
+
         self.collision_detected = msg.data
+
 
 
     # Manual stop command send by the joystick 
@@ -138,10 +159,11 @@ class led_manager(Node):
 
         user_stop_command = msg.data
 
-        if (user_stop_command == True) and (last_stop_command == False): 
+        if (user_stop_command == True) and (self.last_stop_command == False): 
             self.is_emergency_stop = not self.is_emergency_stop
 
-        last_stop_command = user_stop_command
+        self.last_stop_command = user_stop_command
+
 
 
     def ultrasonicStatus_callback(self, msg): 
@@ -156,7 +178,7 @@ class led_manager(Node):
 
 
 
-    def current_goal_callback(self, msg):
+    def goal_current_callback(self, msg):
         
         self.goal_pose.x = msg.pose.position.x
         self.goal_pose.y = msg.pose.position.y
@@ -169,51 +191,74 @@ class led_manager(Node):
         self.goal_reached = msg.data
 
         if (self.goal_reached == True) and (self.last_goal_reached == False): 
-            start_time = self.get_clock().now()
+            
+            self.start_time = self.get_clock().now()
             self.led_goal_reached = True
         
+        else: 
+
+            self.led_goal_reached = False
+
         self.last_goal_reached = self.goal_reached
 
-        if (self.get_clock().now() - start_time) > self.LED_ON_TIME: 
+
+        if (self.get_clock().now() - self.start_time) > self.LED_ON_TIME: 
+            
             self.led_goal_reached = False 
 
+        
+
         if self.goal_pose.theta == self.WAYPOINT_GOAL: 
+        
             self.led_goal_signal = True
         
-        if self.goal_pose.theta == self.GHOST_GOAL: 
-            self.led_goal_signal = False
 
+        if self.goal_pose.theta == self.GHOST_GOAL: 
+            
+            self.led_goal_signal = False
+        
+        
  
 def main():
-    
-    led_color.data = node.PINK
 
-    if node.robot_state == 50: 
-        led_color.data = node.BLUE
 
-        if (node.led_goal_reached == True) and (node.led_goal_signal == True):
-            led_color.data = node.GREEN
+    if node.is_emergency_stop: 
 
-        if node.collision_detected == True: 
-            led_color.data = node.ORANGE
-        
-        if node.ultrasonic_disabled == True: 
-            led_color.data = node.YELLOW
-    
-    if node.robot_state == 2: 
         led_color.data = node.RED
-        
+    
+    else: 
+
+        if node.robot_state == 50: 
+
+            led_color.data = node.BLUE
+
+
+            if (node.led_goal_reached == True) and (node.led_goal_signal == True):
+
+                led_color.data = node.GREEN
+
+
+            if node.collision_detected == True: 
+
+                led_color.data = node.ORANGE
+
+
+            if node.ultrasonic_disabled == True: 
+
+                led_color.data = node.YELLOW
+    
     
     node.led_color_pub.publish(led_color) 
 
+
     if debug_mode: 
-        node.get_logger().info(f"\nLED_MANAGER:"
-                               f"Color: {led_color} \n"
-                               f"Collision alert: {node.collision_detected} \n"
-                               f"Stop command: {node.user_stop_command} \n"
-                               f"Robo tsate: {node.robot_state} \n"
-                               f"Goal reached: {node.led_goal_reached} \n"
-                               f"Waypoint goal: {node.led_goal_signal}")
+
+        node.get_logger().info(f"Color: {led_color}")
+        node.get_logger().info(f"Collision alert: {node.collision_detected}")
+        node.get_logger().info(f"Stop command: {node.is_emergency_stop}")
+        node.get_logger().info(f"Robot sate: {node.robot_state}")
+        node.get_logger().info(f"Goal reached: {node.led_goal_reached}")
+        node.get_logger().info(f"Waypoint goal: {node.led_goal_signal}\n")
 
 
 if __name__ == '__main__':
