@@ -26,18 +26,29 @@ debug_mode = '--debug' in sys.argv
 node_path = '~/ros2_ws/src/fred2_move_base/config/move_base_params.yaml'
 node_group = 'safe_twist'
 
-smallest_reading = 100
+smallest_reading = 1000
 
 cmd_vel = Twist()
 
-robot_safety = False
-user_abort_command = True
+stop_by_obstacle = False 
+
 
 class SafeTwistNode(Node):
 
-    left_ultrasonic_distance = 0
-    right_ultrasonic_distance = 0
-    back_ultrasonic_distance = 0
+    left_ultrasonic_distance = 1000
+    right_ultrasonic_distance = 1000
+    back_ultrasonic_distance = 1000
+
+    user_abort_command = True
+    abort_previous_flag = False
+    
+    robot_safety = False
+
+    robot_vel = Twist()
+
+    cmd_vel_safe = Twist()
+    cmd_vel = Twist()
+
 
     def __init__(self, 
                  node_name: str, 
@@ -114,8 +125,6 @@ class SafeTwistNode(Node):
         self.load_params(node_path, node_group)
         self.get_params()
 
-        self.abort_previous_flag = False
-
 
     def load_params(self, path, group): 
         param_path = os.path.expanduser(path)
@@ -163,7 +172,6 @@ class SafeTwistNode(Node):
 
     def odom_callback(self, msg): 
         
-        self.robot_vel = Twist()
         self.robot_vel.linear.x = msg.twist.twist.linear.x
         self.robot_vel.angular.z = msg.twist.twist.angular.z
     
@@ -172,42 +180,41 @@ class SafeTwistNode(Node):
 
     def cmdVel_callback(self, velocity): 
         
-        self.cmd_vel = Twist()
         self.cmd_vel.linear.x = velocity.linear.x
         self.cmd_vel.angular.z = velocity.angular.z
     
 
 
 
-
     def abort_callback(self, user_command): 
-
-        global robot_safety, user_abort_command
 
         self.abort_flag = user_command.data 
 
-        if (self.abort_flag == True and self.abort_previous_flag == False): 
-            user_abort_command = not user_abort_command
+        if (self.abort_flag > self.abort_previous_flag): 
+
+            self.user_abort_command = not self.user_abort_command
+
 
         self.abort_previous_flag = self.abort_flag
+        
 
         if self.user_abort_command: 
-            self.cmd_vel.linear.x = self.robot_vel.linear.x * self.MOTOR_BRAKE_FACTOR
-            self.cmd_vel.angular.z = self.robot_vel.angular.z * self.MOTOR_BRAKE_FACTOR
 
-        robot_safety = not user_abort_command 
+            self.cmd_vel_safe.linear.x = self.robot_vel.linear.x * self.MOTOR_BRAKE_FACTOR
+            self.cmd_vel_safe.angular.z = self.robot_vel.angular.z * self.MOTOR_BRAKE_FACTOR
+
+        self.robot_safety = not self.user_abort_command 
 
 
 def main():
 
-    global smallest_reading
-    global robot_safety, user_abort_command
+    global smallest_reading, stop_by_obstacle
 
     if disable_ultrasonics: 
         stop_by_obstacle = False
         braking_factor = 1
 
-        node.get_logger().info('The ultrasonics sensors has been desable')
+        node.get_logger().info('The ultrasonics sensors has been desable', once=True)
 
     else: 
 
@@ -217,16 +224,22 @@ def main():
 
             stop_by_obstacle = True 
 
+        else: 
+            stop_by_obstacle = False
+
 
         if node.right_ultrasonic_distance < smallest_reading: 
+
             smallest_reading = node.right_ultrasonic_distance
 
 
         if node.left_ultrasonic_distance < smallest_reading: 
+
             smallest_reading = node.left_ultrasonic_distance
 
 
         if node.back_ultrasonic_distance < smallest_reading: 
+
             smallest_reading = node.back_ultrasonic_distance 
 
 
@@ -234,41 +247,56 @@ def main():
 
 
         if braking_factor > 1: 
+
             braking_factor = 1
         
 
         if braking_factor < 0.5: 
+
             braking_factor = 0
         
-    if robot_safety: 
+
+    if node.robot_safety: 
         
 
         if stop_by_obstacle: 
-            cmd_vel.linear.x = node.robot_vel.linear.x * node.MOTOR_BRAKE_FACTOR
-            cmd_vel.angular.z = node.robot_vel.angular.z * node.MOTOR_BRAKE_FACTOR
+
+            node.cmd_vel_safe.linear.x = node.robot_vel.linear.x * node.MOTOR_BRAKE_FACTOR
+            node.cmd_vel_safe.angular.z = node.robot_vel.angular.z * node.MOTOR_BRAKE_FACTOR
+
 
         else: 
-            cmd_vel.linear.x = node.cmd_vel.linear.x * braking_factor
-            cmd_vel.angular.z = node.cmd_vel.angular.z * braking_factor 
+
+            node.cmd_vel_safe.linear.x = node.cmd_vel.linear.x * braking_factor
+            node.cmd_vel_safe.angular.z = node.cmd_vel.angular.z * braking_factor 
 
 
-        if (cmd_vel.linear.x > node.MAX_LINEAR_SPEED): 
-            cmd_vel.linear.x = node.MAX_LINEAR_SPEED
+        if (node.cmd_vel_safe.linear.x > node.MAX_LINEAR_SPEED): 
+
+            node.cmd_vel_safe.linear.x = node.MAX_LINEAR_SPEED
 
 
-        if (cmd_vel.linear.x < - node.MAX_LINEAR_SPEED): 
-            cmd_vel.linear.x = - node.MAX_LINEAR_SPEED 
+
+        if (node.cmd_vel_safe.linear.x < - node.MAX_LINEAR_SPEED):
+
+            node.cmd_vel_safe.linear.x = - node.MAX_LINEAR_SPEED 
 
 
-        if (cmd_vel.angular.z > node.MAX_ANGULAR_SPEED): 
-            cmd_vel.angular.z = node.MAX_ANGULAR_SPEED
+
+        if (node.cmd_vel_safe.angular.z > node.MAX_ANGULAR_SPEED): 
+
+            node.cmd_vel_safe.angular.z = node.MAX_ANGULAR_SPEED
+
 
         
-        if (cmd_vel.angular.z < - node.MAX_ANGULAR_SPEED): 
-            cmd_vel.angular.z = - node.MAX_ANGULAR_SPEED
+        if (node.cmd_vel_safe.angular.z < - node.MAX_ANGULAR_SPEED): 
+
+            node.cmd_vel_safe.angular.z = - node.MAX_ANGULAR_SPEED
+
+
 
     userStop_msg = Bool()
-    userStop_msg.data = user_abort_command
+    userStop_msg.data = node.user_abort_command
 
     distanceStop_msg = Bool()
     distanceStop_msg.data = stop_by_obstacle
@@ -276,18 +304,17 @@ def main():
     ultrasonicDisabled_msg = Bool()
     ultrasonicDisabled_msg.data = disable_ultrasonics
     
-    node.safeVel_pub.publish(cmd_vel)
+    node.safeVel_pub.publish(node.cmd_vel_safe)
     node.userStop_pub.publish(userStop_msg)
     node.distanceStop_pub.publish(distanceStop_msg)
     node.ultrasonicDisabled_pub.publish(ultrasonicDisabled_msg)
 
     if debug_mode: 
-        node.get_logger().info(
-                               f'Emergency mode -> user comand abort: {user_abort_command} | collision detected: {stop_by_obstacle} | ultrasonics disabled: {disable_ultrasonics}\n'
-                               f'Ultrasonics -> left: {node.left_ultrasonic_distance} | right: {node.right_ultrasonic_distance} | Back: {node.back_ultrasonic_distance}\n'
-                               f'Robot velocity -> linear: {node.robot_vel.linear.x} | angular: {node.robot_vel.angular.z}\n'
-                               f'Velocity command -> linar: {cmd_vel.linear.x} | angular: {cmd_vel.angular.z} | braking_factor: {braking_factor}\n'
-                               )
+
+        node.get_logger().info(f'Emergency mode -> user comand abort: {node.user_abort_command} | collision detected: {stop_by_obstacle} | ultrasonics disabled: {disable_ultrasonics}')
+        node.get_logger().info(f'Ultrasonics -> left: {node.left_ultrasonic_distance} | right: {node.right_ultrasonic_distance} | Back: {node.back_ultrasonic_distance}')
+        node.get_logger().info(f'Robot velocity -> linear: {node.robot_vel.linear.x} | angular: {node.robot_vel.angular.z}')
+        node.get_logger().info(f'Velocity command -> linar: {cmd_vel.linear.x} | angular: {cmd_vel.angular.z} | braking_factor: {braking_factor}\n')
         
 if __name__ == '__main__':
     # Create a custom context for single thread and real-time execution
@@ -314,6 +341,8 @@ if __name__ == '__main__':
     thread.start()
 
     rate = node.create_rate(10)
+
+    print(smallest_reading)
 
     try: 
         while rclpy.ok(): 
