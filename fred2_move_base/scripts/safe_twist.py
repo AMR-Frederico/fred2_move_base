@@ -214,7 +214,7 @@ def main():
         stop_by_obstacle = False
         braking_factor = 1
 
-        node.get_logger().info('The ultrasonics sensors has been desable', once=True)
+        node.get_logger().info('The ultrasonics sensors has been desable', once = True, throttle_duration_sec = 1.0)
 
     else: 
 
