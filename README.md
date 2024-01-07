@@ -221,6 +221,18 @@ The Joy Interface is a node that interfaces with a joystick (e.g., PS4 controlle
 - `MAX_VALUE_CONTROLLERr`: Maximum value of analog joystick input.
 - `DRIFT_ANALOG_TOLERANCE`: Minimum threshold for joystick input to be considered.
 
+
+### Run 
+**Default:**
+
+```
+ros2 run fred2_move_base joy_esp_interface.py
+```
+
+**Enable debug:**
+```
+ros2 run fred2_move_base joy_esp_interface.py --debug
+
 ---
 
 ## Odometry
