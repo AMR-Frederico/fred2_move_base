@@ -166,13 +166,13 @@ class led_manager(Node):
         self.last_stop_command = user_stop_command
 
 
-
+    # Signal if the ultrasonics are disabled 
     def ultrasonicStatus_callback(self, msg): 
         
         self.ultrasonic_disabled = msg.data
 
 
-
+    # Current robot state
     def robot_state_callback(self, msg): 
         
         self.robot_state = msg.data
@@ -186,7 +186,7 @@ class led_manager(Node):
         self.goal_pose.theta = msg.pose.orientation.z
 
 
-
+    # When the robot reaches the goal, analize if that is one the it shoud signal  
     def goal_reached_callback(self, msg):
 
         self.goal_reached = msg.data
@@ -203,6 +203,7 @@ class led_manager(Node):
         self.last_goal_reached = self.goal_reached
 
 
+        # For keeping the signal on for a determined time
         if (self.get_clock().now() - self.start_time) > self.LED_ON_TIME: 
             
             self.led_goal_reached = False 
