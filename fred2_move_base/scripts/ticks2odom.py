@@ -3,6 +3,7 @@
 import rclpy
 import threading
 import yaml 
+import sys
 import os
 import transforms3d as tf3d
 
@@ -26,6 +27,9 @@ from nav_msgs.msg import Odometry
 # Parameters file (yaml)
 node_path = '~/ros2_ws/src/fred2_move_base/config/move_base_params.yaml'
 node_group = 'odometry'
+
+# Node execution arguments 
+debug_mode = '--debug' in sys.argv
 
 class OdometryNode(Node):
 
@@ -116,6 +120,7 @@ class OdometryNode(Node):
 
 
 
+
     def ticksRight_callback(self, ticks_msg): 
         
         self.right_wheels_ticks = ticks_msg.data
@@ -126,16 +131,16 @@ class OdometryNode(Node):
         
         self.robot_quaternion = imu_msg
 
-        self.robot_heading = tf3d.euler.quat2euler( self.robot_quaternion.x, 
-                                                    self.robot_quaternion.y, 
-                                                    self.robot_quaternion.z, 
-                                                    self.robot_quaternion.w)[2]
+        self.robot_heading = tf3d.euler.quat2euler([self.robot_quaternion.orientation.w, 
+                                                    self.robot_quaternion.orientation.x, 
+                                                    self.robot_quaternion.orientation.y, 
+                                                    self.robot_quaternion.orientation.z])[2]
+        
 
 
     def odomReset_callback(self, reset_msg):
         
         self.reset_odom = reset_msg.data
-
 
 
 
@@ -170,6 +175,7 @@ class OdometryNode(Node):
 
         self.delta_left_ticks = self.left_wheels_ticks - self.last_left_ticks
         self.delta_right_ticks = self.right_wheels_ticks - self.last_right_ticks
+
 
         # distance traveled by each wheel  
         self.distance_left = (2 * pi * self.WHEELS_RADIUS * self.delta_left_ticks) / self.TICKS_PER_TURN
@@ -231,6 +237,12 @@ class OdometryNode(Node):
 
         self.last_time = self.current_time    
 
+        if debug_mode: 
+            node.get_logger().info(f'Position -> x: {self.x_pos} | y: {self.y_pos}')
+            node.get_logger().info(f'Velocity -> x: {self.linear_vel_x} | y: {self.linear_vel_y} | theta: {self.angular_vel_theta}')
+            node.get_logger().info(f'Ticks -> left: {self.left_wheels_ticks} | right: {self.right_wheels_ticks} \n')
+
+
 
     def odom_msg(self): 
 
@@ -273,7 +285,7 @@ class OdometryNode(Node):
         odom_tf.transform.translation.z = 0.0
 
         # Calculate quaternion from Euler angles
-        self.odom_quat = tf3d.euler.euler2quat(0, 0, self.theta)  
+        self.odom_quat = tf3d.euler.euler2quat(0, 0, self.theta)
 
         odom_tf.transform.rotation.x = self.odom_quat[1]
         odom_tf.transform.rotation.y = self.odom_quat[2]
@@ -296,8 +308,6 @@ class OdometryNode(Node):
         base_link_tf.transform.rotation.w = 1.0
 
         self.base_link_broadcaster.sendTransform(base_link_tf)
-
-        print('aaaa')
 
 
 if __name__ == '__main__': 
