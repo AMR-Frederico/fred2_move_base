@@ -15,6 +15,48 @@ The package efficiently manages the LED strip on the robot, dynamically adjustin
 
 ----
 
+## Installation 
+
+**1. Clone the repository into your ROS2 workspace:**
+
+```bash
+cd ros2_ws/src
+git clone https://github.com/AMR-Frederico/fred2_move_base.git
+```
+
+**2. Build the package:**
+
+```bash
+cd ros2_ws
+colcon build
+```
+
+**3. Install the `transforms3d` library:**
+
+```bash
+pip install transforms3d
+```
+
+----
+
+## Usage
+
+**Launch the package:**
+
+```bash
+ros2 launch fred2_move_base move_base_launch.yaml
+```
+
+**Joystick commands:**
+
+- Use the left analog stick for linear velocity control.
+- Use the right analog stick for angular velocity control.
+- Press the circle button to reset odometry.
+- Press the triangle button to switch between different modes.
+- Press the X button to stop and block/release the robot
+
+---
+
 ## Led manager node
 Determinate the LED strip's color basead on the robot state. Responsable for the waypoint sinalization. 
 
@@ -44,6 +86,20 @@ Determinate the LED strip's color basead on the robot state. Responsable for the
 |   `goal_manager/goal/reached`    |       `std_msgs/Bool`       |
 
  <br>
+
+### Parameters: 
+
+- `WHITE`: Index to indicate white color on the LED strip
+- `BLUE`: Index to indicate blue color on the LED strip
+- `YELLOW`: Index to indicate yellow color on the LED strip
+- `PINK`: Index to indicate pink color on the LED strip
+- `GREEN`: Index to indicate green color on the LED strip
+- `ORANGE`: Index to indicate orange color on the LED strip
+- `RED`: Index to indicate red color on the LED strip
+- `BLACK`: Index to turn off the LED strip
+
+- `WAYPOINT_GOAL`: Index to indicate goals points that the robot must signal
+- `GHOST_GOAL`: Index to indicate ghost goals
 
 ### Run 
 **Default:**
@@ -84,14 +140,24 @@ The node is responsible for managing the velocity commands of a robot based on s
 **Subscribers:**
 |             Name                 |             Type            |
 | :--------------------------------| :-------------------------  |
-| '/sensor/range/ultrasonic/right' |     `std_msgs/Float32`      |
-| '/sensor/range/ultrasonic/left'  |     `std_msgs/Float32`      |
-| '/sensor/range/ultrasonic/back'  |     `std_msgs/Float32`      |
-|             '/odom'              |     `nav_msgs/Odometry`     |
-|            '/cmd_vel'            |    `geometry_msgs/Twist`    |
-|   '/joy/controler/ps4/break'     |       `std_msgs/Bool`       |
+| `/sensor/range/ultrasonic/right` |     `std_msgs/Float32`      |
+| `/sensor/range/ultrasonic/left`  |     `std_msgs/Float32`      |
+| `/sensor/range/ultrasonic/back`  |     `std_msgs/Float32`      |
+|             `/odom`              |     `nav_msgs/Odometry`     |
+|            `/cmd_vel`            |    `geometry_msgs/Twist`    |
+|   `/joy/controler/ps4/break`     |       `std_msgs/Bool`       |
 
  <br>
+
+### Parameters 
+
+- `SAFE_DISTANCE`: Minimum safe distance (in cm) that the robot can be from an object
+ 
+- `MOTOR_BRAKE_FACTOR`: Brake factor for stop the robot as quickly as possible
+ 
+- `MAX_LINEAR_SPEED`: Maximum linear speed of the robot
+- `MAX_ANGULAR_SPEED`: Maximum angular of the robot
+
 
 ### Run 
 **Default:**
@@ -108,4 +174,98 @@ ros2 run fred2_move_base safe_twist.py --debug
 **Disable ultrasonics:**
 ```
 ros2 run fred2_move_base safe_twist.py --disable_ultrasonics
+```
+
+---
+
+## Joystick interface
+
+The Joy Interface is a node that interfaces with a joystick (e.g., PS4 controller) to control a mobile robot. It receives the joystick commands, sent by a microcontroller and translates it into velocity commands for the robot, allowing for manual control and additional functionalities.
+
+**Type:** `python` 
+
+**Name:** `joy_esp_interface`
+
+**Namespace:** `move_base`
+
+### Topics
+**Publishers:**
+
+|               Name                  |          Type        | 
+|:-----------------------             |:---------------------|
+|`/joy/controler/ps4/cmd_vel/linear`  |   `std_msgs/Int16`   | 
+|`/joy/controler/ps4/cmd_vel/angular` |   `std_msgs/Int16`   |
+|`/joy/controler/ps4/circle`          |   `std_msgs/Int16`   |
+|`/joy/controler/ps4/triangle`        |   `std_msgs/Int16`   |
+|`/machine_state/control_mode/manual` |   `std_msgs/Bool`    |
+
+
+<br>
+
+**Subscribers:**
+|             Name                       |             Type            |
+| :--------------------------------------| :-------------------------  |
+| `/goal_manager/goal/mission_completed` |     `std_msgs/Bool`         |
+| `/goal_manager/goal/reset`             |     `std_msgs/Bool`         |
+| `/machine_state/control_mode/switch`   |     `std_msgs/Bool`         |
+| `/odom/reset`                          |     `std_msgs/Bool`         |
+| `/cmd_vel`                             |    `geometry_msgs/Twist`    |
+
+
+ <br>
+
+### Pararams
+
+- `MAX_SPEED_JOY_LINEAR`: Maximum linear speed of the robot.
+- `MAX_SPEED_JOY_ANGULAR`: Maximum angular speed of the robot.
+- `MAX_VALUE_CONTROLLERr`: Maximum value of analog joystick input.
+- `DRIFT_ANALOG_TOLERANCE`: Minimum threshold for joystick input to be considered.
+
+---
+
+## Odometry
+The Odometry Node is responsible for calculating and publishing odometry information for a mobile robot using wheel encoder ticks and IMU data, with automatic reset of odometry when requested. 
+
+**Type:** `python` 
+
+**Name:** `odometry`
+
+**Namespace:** `move_base`
+
+### Topics
+**Publishers:**
+
+|               Name                 |          Type        | 
+|:-----------------------            |:---------------------|
+|`/power/status/distance/ticks/right` |   `std_msgs/Int32`   | 
+|`/power/status/distance/ticks/left` |   `std_msgs/Int32`   |
+|       `/sensor/orientation/imu`    |   `sensor_msgs/Imu`  |
+|             `/odom/reset`          |   `std_msgs/Bool`    |
+
+<br>
+
+**Subscribers:**
+|             Name                 |             Type            |
+| :--------------------------------| :-------------------------  |
+|             `/odom`              |     `nav_msgs/Odometry`     |
+
+ <br>
+
+### Pararams
+- `WHEELS_TRACK`: Distance (in m) between wheels 
+- `WHEELS_RADIUS`: Radius of the wheel in meters.
+- `TICKS_PER_REVOLUTION`: Ticks per turn for the wheel encoder.
+- `BASE_LINK_OFFSET`: Distance (in meters) between the `base_footprint` and `base_link` 
+
+
+### Run 
+**Default:**
+
+```
+ros2 run fred2_move_base ticks2odom.py
+```
+
+**Enable debug:**
+```
+ros2 run fred2_move_base ticks2odom.py --debug
 ```
