@@ -5,7 +5,7 @@ import threading
 import yaml 
 import sys
 import os
-import transforms3d as tf3d
+import transforms3d as tf3d     # angle manipulaton 
 
 from typing import List, Optional
 
@@ -127,10 +127,12 @@ class OdometryNode(Node):
 
 
 
+
     def heading_callback(self, imu_msg): 
         
         self.robot_quaternion = imu_msg
 
+        # get the yaw angle
         self.robot_heading = tf3d.euler.quat2euler([self.robot_quaternion.orientation.w, 
                                                     self.robot_quaternion.orientation.x, 
                                                     self.robot_quaternion.orientation.y, 
@@ -228,6 +230,7 @@ class OdometryNode(Node):
             self.linear_vel_y = self.delta_y / self.elapse_time
             self.angular_vel_theta = self.delta_theta / self.elapse_time
         
+
         self.odom_transform()
         self.odom_msg()
 
@@ -330,6 +333,7 @@ if __name__ == '__main__':
     executor = SingleThreadedExecutor(context=odom_context)
     executor.add_node(node)
 
+    # create a separate thread for the callbacks and another for the main function 
     thread = threading.Thread(target=rclpy.spin, args=(node,), daemon=True)
     thread.start()
 
