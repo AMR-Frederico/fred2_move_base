@@ -74,39 +74,39 @@ class JoyInterfaceNode(Node):
         )
 
         self.create_subscription(Int16, 
-                                 'joy/controler/ps4/cmd_vel/linear', 
+                                 '/joy/controler/ps4/cmd_vel/linear', 
                                  self.velLinear_callback, 
                                  qos_profile)
         
         self.create_subscription(Int16, 
-                                 'joy/controler/ps4/cmd_vel/angular', 
+                                 '/joy/controler/ps4/cmd_vel/angular', 
                                  self.velAngular_callback, 
                                  qos_profile)
         
         self.create_subscription(Bool, 
-                                 'machine_state/control_mode/manual', 
+                                 '/machine_state/control_mode/manual', 
                                  self.manualMode_callback, 
                                  qos_profile)
 
         self.create_subscription(Int16, 
-                                 'joy/controler/ps4/circle', 
+                                 '/joy/controler/ps4/circle', 
                                  self.resetOdom_callback, 
                                  qos_profile)
 
         self.create_subscription(Int16, 
-                                 'joy/controler/ps4/triangle', 
+                                 '/joy/controler/ps4/triangle', 
                                  self.switchMode_callback, 
                                  qos_profile)
 
-        self.vel_pub = self.create_publisher(Twist, 'cmd_vel', 1)      
+        self.vel_pub = self.create_publisher(Twist, '/cmd_vel', 1)      
 
-        self.resetOdom_pub = self.create_publisher(Bool, 'odom/reset', 1)
+        self.resetOdom_pub = self.create_publisher(Bool, '/odom/reset', 1)
 
-        self.goalsReset_pub = self.create_publisher(Bool, 'goal_manager/goal/reset', 1)
+        self.goalsReset_pub = self.create_publisher(Bool, '/goal_manager/goal/reset', 1)
 
-        self.switchMode_pub = self.create_publisher(Bool, 'machine_state/control_mode/switch', 1) 
+        self.switchMode_pub = self.create_publisher(Bool, '/machine_state/control_mode/switch', 1) 
 
-        self.missionCompleted_pub = self.create_publisher(Bool, 'goal_manager/goal/mission_completed', 1)
+        self.missionCompleted_pub = self.create_publisher(Bool, '/goal_manager/goal/mission_completed', 1)
 
         self.load_params(node_path, node_group)
         self.get_params()

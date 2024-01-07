@@ -112,14 +112,15 @@ class SafeTwistNode(Node):
                                                 qos_profile)
 
         self.userStop_pub = self.create_publisher(Bool, 
-                                                  'safety/abort/user_command', 
+                                                  '/safety/abort/user_command', 
                                                   qos_profile)
 
         self.distanceStop_pub = self.create_publisher(Bool, 
-                                                      'safety/abort/colision_detection', 
+                                                      '/safety/abort/colision_detection', 
                                                       qos_profile)
+        
         self.ultrasonicDisabled_pub = self.create_publisher(Bool, 
-                                                            'safety/ultrasonic/disabled', 
+                                                            '/safety/ultrasonic/disabled', 
                                                             qos_profile)
 
         self.load_params(node_path, node_group)

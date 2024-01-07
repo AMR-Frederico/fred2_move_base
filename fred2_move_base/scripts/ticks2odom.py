@@ -83,26 +83,26 @@ class OdometryNode(Node):
         )
 
         self.create_subscription(Int32, 
-                                 'power/status/distance/ticks/left', 
+                                 '/power/status/distance/ticks/left', 
                                  self.ticksLeft_callback,
                                  qos_profile)
 
         self.create_subscription(Int32, 
-                                 'power/status/distance/ticks/right', 
+                                 '/power/status/distance/ticks/right', 
                                  self.ticksRight_callback, 
                                  qos_profile)
         
         self.create_subscription(Imu, 
-                                 'sensor/orientation/imu', 
+                                 '/sensor/orientation/imu', 
                                  self.heading_callback, 
                                  qos_profile)
         
         self.create_subscription(Bool, 
-                                 'odom/reset', 
+                                 '/odom/reset', 
                                  self.odomReset_callback, 
                                  qos_profile)
         
-        self.odom_pub = self.create_publisher(Odometry, 'odom', qos_profile)
+        self.odom_pub = self.create_publisher(Odometry, '/odom', qos_profile)
 
         self.load_params(node_path, node_group)
         self.get_params()

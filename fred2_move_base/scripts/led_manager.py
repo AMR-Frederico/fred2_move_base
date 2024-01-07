@@ -74,38 +74,39 @@ class led_manager(Node):
 
         self.collisionDetection_sub = self.create_subscription(
                                     Bool,
-                                    'safety/abort/colision_detection', 
+                                    '/safety/abort/colision_detection', 
                                     self.collision_callback,
                                     10 )
 
         self.manualAbort_sub = self.create_subscription(
                                     Bool, 
-                                    'safety/abort/user_command',
+                                    '/safety/abort/user_command',
                                     self.manual_abort_callback,
                                     10 )
         
+        self.ultrasonicStatus_sub = self.create_subscription(Bool, 
+                                                             '/safety/ultrasonic/disabled', 
+                                                             self.ultrasonicStatus_callback, 
+                                                             10 )
+        
         self.robotState_sub = self.create_subscription(
                                     Int16,
-                                    'machine_states/main/robot_status',
+                                    '/machine_states/main/robot_status',
                                     self.robot_state_callback, 
                                     10 )
 
         self.currentGoal_sub = self.create_subscription(
                                     PoseStamped,
-                                    'goal_manager/goal/current',
+                                    '/goal_manager/goal/current',
                                     self.goal_current_callback, 
                                     10 )
         
         self.goalReached_sub = self.create_subscription(
                                     Bool, 
-                                    'goal_manager/goal/reached', 
+                                    '/goal_manager/goal/reached', 
                                     self.goal_reached_callback, 
                                     10 )
         
-        self.ultrasonicStatus_sub = self.create_subscription(Bool, 
-                                                             'safety/ultrasonic/disabled', 
-                                                             self.ultrasonicStatus_callback, 
-                                                             10 )
         
         self.led_color_pub = self.create_publisher(Int16, 
                                                     '/cmd/led_strip/color', 
