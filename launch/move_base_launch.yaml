@@ -1,0 +1,25 @@
+launch:
+
+- node:
+    pkg: fred2_move_base
+    exec: joy_esp_interface.py
+    name: joy_esp_interface
+    namespace: move_base
+
+- node: 
+    pkg: fred2_move_base
+    exec: led_manager.py
+    name: led_manager
+    namespace: move_base
+
+- node:
+    pkg: fred2_move_base
+    exec: safe_twist.py 
+    name: safe_twist
+    namespace: move_base
+
+- node:
+    pkg: fred2_move_base
+    exec: ticks2odom.py
+    name: odometry
+    namespace: move_base
