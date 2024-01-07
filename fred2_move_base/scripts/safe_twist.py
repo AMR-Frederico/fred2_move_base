@@ -28,8 +28,6 @@ node_group = 'safe_twist'
 
 smallest_reading = 1000
 
-cmd_vel = Twist()
-
 stop_by_obstacle = False 
 
 
@@ -123,6 +121,7 @@ class SafeTwistNode(Node):
                                                             '/safety/ultrasonic/disabled', 
                                                             qos_profile)
 
+        # get params from the config file
         self.load_params(node_path, node_group)
         self.get_params()
 
@@ -171,6 +170,7 @@ class SafeTwistNode(Node):
 
 
 
+    # get current robot vel 
     def odom_callback(self, msg): 
         
         self.robot_vel.linear.x = msg.twist.twist.linear.x
@@ -178,7 +178,7 @@ class SafeTwistNode(Node):
     
 
 
-
+    # get the vel command sent by others nodes 
     def cmdVel_callback(self, velocity): 
         
         self.cmd_vel.linear.x = velocity.linear.x
@@ -186,7 +186,7 @@ class SafeTwistNode(Node):
     
 
 
-
+    # when received a emergency brake command, forces the robot to stop and keep it still until the button is released
     def abort_callback(self, user_command): 
 
         self.abort_flag = user_command.data 
@@ -219,6 +219,7 @@ def main():
 
     else: 
 
+        # if something is detected by the ultrasonics, stop the robot while the object is being detected
         if (node.right_ultrasonic_distance < node.SAFE_DISTANCE or
             node.left_ultrasonic_distance  < node.SAFE_DISTANCE or 
             node.back_ultrasonic_distance  < node.SAFE_DISTANCE): 
@@ -244,6 +245,7 @@ def main():
             smallest_reading = node.back_ultrasonic_distance 
 
 
+        # applies a braking factor based on the distance detected by the sensors     
         braking_factor = smallest_reading/(2 * node.SAFE_DISTANCE)
 
 
@@ -261,35 +263,36 @@ def main():
         
 
         if stop_by_obstacle: 
-
+            # if something is detected by the ultrasonics, stop the robot while the object is being detected
             node.cmd_vel_safe.linear.x = node.robot_vel.linear.x * node.MOTOR_BRAKE_FACTOR
             node.cmd_vel_safe.angular.z = node.robot_vel.angular.z * node.MOTOR_BRAKE_FACTOR
 
 
         else: 
-
+            # applies a braking factor based on the distance detected by the sensors
             node.cmd_vel_safe.linear.x = node.cmd_vel.linear.x * braking_factor
             node.cmd_vel_safe.angular.z = node.cmd_vel.angular.z * braking_factor 
 
 
+        # vel saturaton 
         if (node.cmd_vel_safe.linear.x > node.MAX_LINEAR_SPEED): 
 
             node.cmd_vel_safe.linear.x = node.MAX_LINEAR_SPEED
 
 
-
+        # vel saturaton 
         if (node.cmd_vel_safe.linear.x < - node.MAX_LINEAR_SPEED):
 
             node.cmd_vel_safe.linear.x = - node.MAX_LINEAR_SPEED 
 
 
-
+        # vel saturaton 
         if (node.cmd_vel_safe.angular.z > node.MAX_ANGULAR_SPEED): 
 
             node.cmd_vel_safe.angular.z = node.MAX_ANGULAR_SPEED
 
 
-        
+        # vel saturaton 
         if (node.cmd_vel_safe.angular.z < - node.MAX_ANGULAR_SPEED): 
 
             node.cmd_vel_safe.angular.z = - node.MAX_ANGULAR_SPEED
@@ -310,6 +313,7 @@ def main():
     node.distanceStop_pub.publish(distanceStop_msg)
     node.ultrasonicDisabled_pub.publish(ultrasonicDisabled_msg)
 
+
     if debug_mode: 
 
         node.get_logger().info(f'Emergency mode -> user comand abort: {node.user_abort_command} | collision detected: {stop_by_obstacle} | ultrasonics disabled: {disable_ultrasonics}')
@@ -317,6 +321,8 @@ def main():
         node.get_logger().info(f'Robot velocity -> linear: {node.robot_vel.linear.x} | angular: {node.robot_vel.angular.z}')
         node.get_logger().info(f'Velocity command -> linar: {cmd_vel.linear.x} | angular: {cmd_vel.angular.z} | braking_factor: {braking_factor}\n')
         
+
+
 if __name__ == '__main__':
     # Create a custom context for single thread and real-time execution
     rclpy.init()
@@ -338,6 +344,7 @@ if __name__ == '__main__':
     executor = SingleThreadedExecutor(context=safe_context)
     executor.add_node(node)
 
+    # create a separate thread for the callbacks and another for the main function 
     thread = threading.Thread(target=rclpy.spin, args=(node,), daemon=True)
     thread.start()
 
