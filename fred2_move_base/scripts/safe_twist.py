@@ -103,7 +103,7 @@ class SafeTwistNode(Node):
                                  qos_profile)
         
         self.create_subscription(Bool, 
-                                 '/joy/controler/ps4/break', 
+                                 '/joy/controler/ps4/brake', 
                                  self.abort_callback, 
                                  qos_profile)
         
