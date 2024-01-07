@@ -138,9 +138,9 @@ class JoyInterfaceNode(Node):
 
 
     def get_params(self):
-        self.MAX_SPEED_ROBOT_LINEAR = self.get_parameter('max_speed_robot_linear').value
-        self.MAX_SPEED_ROBOT_ANGULAR = self.get_parameter('max_speed_robot_angular').value
-        self.MAX_VALUE_CONTROLER = self.get_parameter('max_value_controler').value
+        self.MAX_SPEED_JOY_LINEAR = self.get_parameter('max_speed_joy_linear').value
+        self.MAX_SPEED_JOY_ANGULAR = self.get_parameter('max_speed_joy_angular').value
+        self.MAX_VALUE_CONTROLLER = self.get_parameter('max_value_controller').value
         self.DRIFT_ANALOG_TOLERANCE = self.get_parameter('drift_analog_tolerance').value
 
 
@@ -197,8 +197,8 @@ def main():
     vel_linear = 0
 
     # rule of three equating the maximum speed of the joy with that of the robot
-    vel_angular = node.controler_buttons['R_X'] * (node.MAX_SPEED_ROBOT_ANGULAR / node.MAX_VALUE_CONTROLER)
-    vel_linear = node.controler_buttons['L_Y'] * (node.MAX_SPEED_ROBOT_LINEAR / node.MAX_VALUE_CONTROLER)
+    vel_angular = node.controler_buttons['R_X'] * (node.MAX_SPEED_JOY_ANGULAR / node.MAX_VALUE_CONTROLLER)
+    vel_linear = node.controler_buttons['L_Y'] * (node.MAX_SPEED_JOY_LINEAR / node.MAX_VALUE_CONTROLLER)
     
 
     cmd_vel.linear.x = vel_linear
