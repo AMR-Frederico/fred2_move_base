@@ -32,6 +32,7 @@ debug_mode = '--debug' in sys.argv
 
 class JoyInterfaceNode(Node):
 
+    # controller buttons
     controler_buttons = {"square": None,
                          "circle": None,
                          "triangule": None,
@@ -41,8 +42,11 @@ class JoyInterfaceNode(Node):
                          "L_Y":0,
                          "R_X":0}
     
+    # robot state
     manual_mode = False
     switch_mode = False
+
+    # odometry
     reset_odom = 0
     
     def __init__(self, 
@@ -108,6 +112,8 @@ class JoyInterfaceNode(Node):
 
         self.missionCompleted_pub = self.create_publisher(Bool, '/goal_manager/goal/mission_completed', 1)
 
+
+        # load params from the config file 
         self.load_params(node_path, node_group)
         self.get_params()
 
@@ -138,7 +144,7 @@ class JoyInterfaceNode(Node):
         self.DRIFT_ANALOG_TOLERANCE = self.get_parameter('drift_analog_tolerance').value
 
 
-
+    # get linear vel, if is it above min threshold
     def velLinear_callback(self, vel_msg): 
         
         if(abs(vel_msg.data) > self.DRIFT_ANALOG_TOLERANCE): 
@@ -151,7 +157,7 @@ class JoyInterfaceNode(Node):
     
 
 
-
+    # get angular vel, if is it above min threshold
     def velAngular_callback(self, vel_msg): 
 
         if(abs(vel_msg.data) > self.DRIFT_ANALOG_TOLERANCE):
@@ -186,7 +192,7 @@ def main():
     global last_reset_odom, last_mode
     
     #* speed control (anolog buttons)
-    #only send comands if manual mode on 
+    # only send comands if manual mode is on 
     vel_angular = 0
     vel_linear = 0
 
@@ -198,6 +204,7 @@ def main():
     cmd_vel.linear.x = vel_linear
     cmd_vel.angular.z = -1 * vel_angular #? Correção de sentido? 
     
+
     if node.manual_mode:
         
         node.vel_pub.publish(cmd_vel)
@@ -207,6 +214,8 @@ def main():
     odom_reset = (node.reset_odom > last_reset_odom)
     last_reset_odom = node.reset_odom
 
+
+    # reset the state of the main machine states, for the initial one 
     if odom_reset: 
 
         missionCompleted_msg = Bool()
@@ -247,6 +256,7 @@ if __name__ == '__main__':
         namespace='move_base',
         enable_rosout=False)
 
+    # separete theread for main function 
     thread = threading.Thread(target=rclpy.spin, args=(node,), daemon=True)
     thread.start()
 
