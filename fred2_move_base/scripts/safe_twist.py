@@ -350,8 +350,6 @@ if __name__ == '__main__':
 
     rate = node.create_rate(10)
 
-    print(smallest_reading)
-
     try: 
         while rclpy.ok(): 
             main()
