@@ -74,7 +74,7 @@ class led_manager(Node):
 
         self.collisionDetection_sub = self.create_subscription(
                                     Bool,
-                                    '/safety/abort/colision_detection', 
+                                    '/safety/abort/collision_alert', 
                                     self.collision_callback,
                                     10 )
 
