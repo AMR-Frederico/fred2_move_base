@@ -114,7 +114,7 @@ class SafeTwistNode(Node):
                                                   qos_profile)
 
         self.distanceStop_pub = self.create_publisher(Bool, 
-                                                      '/safety/abort/colision_detection', 
+                                                      '/safety/abort/collision_alert', 
                                                       qos_profile)
         
         self.ultrasonicDisabled_pub = self.create_publisher(Bool, 
@@ -319,7 +319,7 @@ def main():
         node.get_logger().info(f'Emergency mode -> user comand abort: {node.user_abort_command} | collision detected: {stop_by_obstacle} | ultrasonics disabled: {disable_ultrasonics}')
         node.get_logger().info(f'Ultrasonics -> left: {node.left_ultrasonic_distance} | right: {node.right_ultrasonic_distance} | Back: {node.back_ultrasonic_distance}')
         node.get_logger().info(f'Robot velocity -> linear: {node.robot_vel.linear.x} | angular: {node.robot_vel.angular.z}')
-        node.get_logger().info(f'Velocity command -> linar: {cmd_vel.linear.x} | angular: {cmd_vel.angular.z} | braking_factor: {braking_factor}\n')
+        node.get_logger().info(f'Velocity command -> linar: {node.cmd_vel.linear.x} | angular: {node.cmd_vel.angular.z} | braking_factor: {braking_factor}\n')
         
 
 
