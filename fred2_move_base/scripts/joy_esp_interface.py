@@ -87,10 +87,10 @@ class JoyInterfaceNode(Node):
                                  self.velAngular_callback, 
                                  qos_profile)
         
-        self.create_subscription(Bool, 
-                                 '/machine_state/control_mode/manual', 
-                                 self.manualMode_callback, 
-                                 qos_profile)
+        # self.create_subscription(Bool, 
+        #                          '/machine_state/control_mode/manual', 
+        #                          self.manualMode_callback, 
+        #                          qos_profile)
 
         self.create_subscription(Int16, 
                                  '/joy/controler/ps4/circle', 
@@ -108,7 +108,7 @@ class JoyInterfaceNode(Node):
 
         self.goalsReset_pub = self.create_publisher(Bool, '/goal_manager/goal/reset', 1)
 
-        self.switchMode_pub = self.create_publisher(Bool, '/machine_state/control_mode/switch', 1) 
+        self.switchMode_pub = self.create_publisher(Bool, '/joy/machine_states/switch_mode', 1) 
 
         self.missionCompleted_pub = self.create_publisher(Bool, '/goal_manager/goal/mission_completed', 1)
 
@@ -170,9 +170,9 @@ class JoyInterfaceNode(Node):
 
 
 
-    def manualMode_callback(self, manual_msg):
+    # def manualMode_callback(self, manual_msg):
 
-        self.manual_mode = manual_msg.data
+    #     self.manual_mode = manual_msg.data
 
 
 
@@ -233,6 +233,7 @@ def main():
 
     #* switch mode (triangle buttom)
     change_mode.data = node.switch_mode > last_mode
+    
     last_mode = node.switch_mode 
 
 
@@ -243,7 +244,7 @@ def main():
         node.get_logger().info(f'Velocity -> linear:{vel_linear} | angular:{vel_angular}\n')
         node.get_logger().info(f'Reset odometry -> {odom_reset}')
         node.get_logger().info(f'Switch mode -> {change_mode.data}')
-        node.get_logger().info(f'Manual mode -> {node.manual_mode}')
+        # node.get_logger().info(f'Manual mode -> {node.manual_mode}')
 
 
 if __name__ == '__main__': 
