@@ -14,6 +14,7 @@ from rclpy.context import Context
 from rclpy.parameter import Parameter
 from rclpy.executors import SingleThreadedExecutor
 from rclpy.qos import QoSPresetProfiles, QoSProfile, QoSHistoryPolicy, QoSLivelinessPolicy, QoSReliabilityPolicy
+from rcl_interfaces.msg import SetParametersResult
 
 from tf2_ros import TransformBroadcaster
 
@@ -111,6 +112,38 @@ class OdometryNode(Node):
         
         self.odom_broadcaster = TransformBroadcaster(self)
         self.base_link_broadcaster = TransformBroadcaster(self)
+
+
+        self.add_on_set_parameters_callback(self.parameters_callback)
+
+
+
+    def parameters_callback(self, params):
+        
+        for param in params:
+            self.get_logger().info(f"Parameter '{param.name}' changed to: {param.value}")
+
+
+
+        if param.name == 'wheels_track':
+            self.WHEELS_TRACK = param.value
+    
+  
+        if param.name == 'wheels_radius':
+            self.WHEELS_RADIUS = param.value
+
+
+        if param.name == 'ticks_per_revolution': 
+            self.TICKS_PER_TURN = param.value
+
+
+        if param.name == 'base_link_offset': 
+            self.BASE_LINK_OFFSET = param.value
+        
+
+
+        return SetParametersResult(successful=True)
+
 
 
 
@@ -239,6 +272,7 @@ class OdometryNode(Node):
         self.last_right_ticks = self.right_wheels_ticks
 
         self.last_time = self.current_time    
+
 
         if debug_mode: 
             node.get_logger().info(f'Position -> x: {self.x_pos} | y: {self.y_pos}')

@@ -11,6 +11,7 @@ from typing import Any, List, Optional
 from rclpy.parameter import Parameter
 from rclpy.node import Node
 from rclpy.time import Duration, Time
+from rcl_interfaces.msg import SetParametersResult
 
 from rcl_interfaces.msg import Parameter
 from std_msgs.msg import Bool, Int16, Float32
@@ -111,6 +112,62 @@ class led_manager(Node):
         self.led_color_pub = self.create_publisher(Int16, 
                                                     '/cmd/led_strip/color', 
                                                     10 )
+
+        
+        self.add_on_set_parameters_callback(self.parameters_callback)
+
+
+
+    def parameters_callback(self, params):
+        
+        for param in params:
+            self.get_logger().info(f"Parameter '{param.name}' changed to: {param.value}")
+
+
+
+        if param.name == 'white':
+            self.WHITE = param.value
+    
+  
+        if param.name == 'blue':
+            self.BLUE = param.value
+
+
+        if param.name == 'yellow': 
+            self.YELLOW = param.value
+
+
+        if param.name == 'pink': 
+            self.PINK = param.value
+        
+
+        if param.name == 'orange': 
+            self.ORANGE = param.value
+
+
+        if param.name == 'red': 
+            self.RED = param.value
+
+
+        if param.name == 'green': 
+            self.GREEN = param.value
+
+
+        if param.name == 'black': 
+            self.BLACK = param.value
+
+        
+        if param.name == 'waypoint_goal': 
+            self.WAYPOINT_GOAL = param.value
+
+
+        if param.name == 'ghost_goal': 
+            self.GHOST_GOAL = param.value
+
+
+
+        return SetParametersResult(successful=True)
+        
         
 
     def get_colors(self):

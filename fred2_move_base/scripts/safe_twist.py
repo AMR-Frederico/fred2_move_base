@@ -12,6 +12,7 @@ from rclpy.executors import SingleThreadedExecutor, MultiThreadedExecutor
 from rclpy.parameter import Parameter
 from rclpy.context import Context 
 from rclpy.node import Node
+from rcl_interfaces.msg import SetParametersResult
 
 from std_msgs.msg import Bool, Float32
 from geometry_msgs.msg import Twist
@@ -124,6 +125,38 @@ class SafeTwistNode(Node):
         # get params from the config file
         self.load_params(node_path, node_group)
         self.get_params()
+
+
+        self.add_on_set_parameters_callback(self.parameters_callback)
+
+
+
+    def parameters_callback(self, params):
+        
+        for param in params:
+            self.get_logger().info(f"Parameter '{param.name}' changed to: {param.value}")
+
+
+
+        if param.name == 'safe_distance':
+            self.SAFE_DISTANCE = param.value
+    
+  
+        if param.name == 'motor_brake_factor':
+            self.MOTOR_BRAKE_FACTOR = param.value
+
+
+        if param.name == 'max_linear_speed': 
+            self.MAX_LINEAR_SPEED = param.value
+
+
+        if param.name == 'max_angular_speed': 
+            self.MAX_ANGULAR_SPEED = param.value
+
+
+
+        return SetParametersResult(successful=True)
+
 
 
     def load_params(self, path, group): 

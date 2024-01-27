@@ -12,6 +12,7 @@ from rclpy.node import Node
 from rclpy.context import Context 
 from rclpy.parameter import Parameter
 from rclpy.qos import QoSPresetProfiles, QoSProfile, QoSHistoryPolicy, QoSLivelinessPolicy, QoSReliabilityPolicy
+from rcl_interfaces.msg import SetParametersResult
 
 from std_msgs.msg import Int16, Bool
 from geometry_msgs.msg import Twist
@@ -117,7 +118,40 @@ class JoyInterfaceNode(Node):
         self.load_params(node_path, node_group)
         self.get_params()
 
+
+        self.add_on_set_parameters_callback(self.parameters_callback)
+
+
+
+    def parameters_callback(self, params):
+        
+        for param in params:
+            self.get_logger().info(f"Parameter '{param.name}' changed to: {param.value}")
+
+
+
+        if param.name == 'max_speed_joy_linear':
+            self.MAX_SPEED_JOY_LINEAR = param.value
     
+  
+        if param.name == 'max_speed_joy_angular':
+            self.MAX_SPEED_JOY_ANGULAR = param.value
+
+
+        if param.name == 'max_value_controller': 
+            self.MAX_VALUE_CONTROLLER = param.value
+
+
+        if param.name == 'drift_analog_tolerance': 
+            self.DRIFT_ANALOG_TOLERANCE = param.value
+    
+
+
+        return SetParametersResult(successful=True)
+    
+
+
+
     def load_params(self, path, group): 
         param_path = os.path.expanduser(path)
 
@@ -142,6 +176,8 @@ class JoyInterfaceNode(Node):
         self.MAX_SPEED_JOY_ANGULAR = self.get_parameter('max_speed_joy_angular').value
         self.MAX_VALUE_CONTROLLER = self.get_parameter('max_value_controller').value
         self.DRIFT_ANALOG_TOLERANCE = self.get_parameter('drift_analog_tolerance').value
+
+
 
 
     # get linear vel, if is it above min threshold
@@ -203,7 +239,7 @@ def main():
 
     cmd_vel.linear.x = vel_linear
     cmd_vel.angular.z = -1 * vel_angular #? Correção de sentido? 
-    
+
 
     if node.manual_mode:
         
