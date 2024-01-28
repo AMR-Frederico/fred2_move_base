@@ -4,17 +4,18 @@
 ################################################################################################################
 
 led_manager:
-  WHITE: 0
-  BLUE: 5
-  YELLOW: 5
-  PINK: 4
-  GREEN: 3
-  ORANGE: 6
-  RED: 2
-  BLACK: -1
 
-  WAYPOINT_GOAL: 0  # Goals points that the robot must signal
-  GHOST_GOAL: 1
+  white: 0 
+  blue: 5 
+  yellow: 5 
+  pink: 4 
+  green: 3 
+  orange: 6 
+  red: 2
+  black: -1
+
+  waypoint_goal: 0  # Goals points that the robot must signal
+  ghost_goal: 1 
 
 
 ################################################################################################################ 
@@ -22,6 +23,7 @@ led_manager:
 ################################################################################################################
 
 safe_twist: 
+
   safe_distance: 100    # distance in cm 
  
   motor_brake_factor: -1 
@@ -29,6 +31,7 @@ safe_twist:
   max_linear_speed: 2.0  
   max_angular_speed: 20.0
 
+  disable_ultrasonics: false
 
 
 
@@ -37,12 +40,13 @@ safe_twist:
 ################################################################################################################
 
 joy_esp_interface: 
-  MAX_SPEED_JOY_LINEAR: 5
-  MAX_SPEED_JOY_ANGULAR: 10
+
+  max_speed_joy_linear: 5 
+  max_speed_joy_angular: 10 
   
-  MAX_VALUE_CONTROLLER: 127
+  max_value_controller: 127 
   
-  DRIFT_ANALOG_TOLERANCE: 20
+  drift_analog_tolerance: 20 
 
 
 
