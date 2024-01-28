@@ -11,11 +11,13 @@ from typing import Any, List, Optional
 from rclpy.parameter import Parameter
 from rclpy.node import Node
 from rclpy.time import Duration, Time
-from rcl_interfaces.msg import SetParametersResult
 
-from rcl_interfaces.msg import Parameter
+from rcl_interfaces.msg import Parameter, SetParametersResult
+from rcl_interfaces.srv import GetParameters
+
 from std_msgs.msg import Bool, Int16, Float32
 from geometry_msgs.msg import PoseStamped, Pose2D
+
 
 # Parameters file (yaml)
 led_path = '~/ros2_ws/src/fred2_move_base/config/move_base_params.yaml'
@@ -33,8 +35,7 @@ class led_manager(Node):
 
     last_goal_reached = False
 
-    last_stop_command = False
-    is_emergency_stop = True
+    user_stop_command = True
 
     collision_detected = False
 
@@ -92,7 +93,7 @@ class led_manager(Node):
         
         self.robotState_sub = self.create_subscription(
                                     Int16,
-                                    '/machine_states/main/robot_status',
+                                    '/machine_states/robot_state',
                                     self.robot_state_callback, 
                                     10 )
 
@@ -118,11 +119,12 @@ class led_manager(Node):
 
 
 
+
+
     def parameters_callback(self, params):
         
         for param in params:
             self.get_logger().info(f"Parameter '{param.name}' changed to: {param.value}")
-
 
 
         if param.name == 'white':
@@ -184,6 +186,46 @@ class led_manager(Node):
         self.WAYPOINT_GOAL = self.get_parameter('waypoint_goal').value
         self.GHOST_GOAL = self.get_parameter('ghost_goal').value
 
+        
+        # Get global params 
+
+        self.client = self.create_client(GetParameters, '/machine_states/main_robot/get_parameters')
+        self.client.wait_for_service()
+
+        request = GetParameters.Request()
+        request.names = ['manual', 'autonomous', 'in_goal', 'mission_completed', 'emergency']
+
+        future = self.client.call_async(request)
+        future.add_done_callback(self.callback_global_param)
+
+
+    
+    def callback_global_param(self, future):
+
+
+        try:
+
+            result = future.result()
+
+            self.ROBOT_MANUAL = result.values[0].integer_value
+            self.ROBOT_AUTONOMOUS = result.values[1].integer_value
+            self.ROBOT_IN_GOAL = result.values[2].integer_value
+            self.ROBOT_MISSION_COMPLETED = result.values[3].integer_value
+            self.ROBOT_EMERGENCY = result.values[4].integer_value
+
+
+            self.get_logger().info(f"\nGot global param ROBOT_MANUAL -> {self.ROBOT_MANUAL}")
+            self.get_logger().info(f"Got global param ROBOT_AUTONOMOUS -> {self.ROBOT_AUTONOMOUS}")
+            self.get_logger().info(f"Got global param ROBOT_IN GOAL -> {self.ROBOT_IN_GOAL}")
+            self.get_logger().info(f"Got global param ROBOT_MISSION_COMPLETED: {self.ROBOT_MISSION_COMPLETED}")
+            self.get_logger().info(f"Got global param ROBOT_EMERGENCY: {self.ROBOT_EMERGENCY}\n")
+
+
+
+        except Exception as e:
+
+            self.get_logger().warn("Service call failed %r" % (e,))
+
 
 
 
@@ -215,18 +257,21 @@ class led_manager(Node):
     # Manual stop command send by the joystick 
     def manual_abort_callback(self, msg): 
 
-        user_stop_command = msg.data
+        self.user_stop_command = msg.data
 
-        if (user_stop_command == True) and (self.last_stop_command == False): 
-            self.is_emergency_stop = not self.is_emergency_stop
-
-        self.last_stop_command = user_stop_command
 
 
     # Signal if the ultrasonics are disabled 
     def ultrasonicStatus_callback(self, msg): 
+
+        if msg.data: 
+
+            self.ultrasonic_disabled = True
         
-        self.ultrasonic_disabled = msg.data
+        else: 
+
+            self.ultrasonic_disabled = False
+
 
 
     # Current robot state
@@ -241,6 +286,7 @@ class led_manager(Node):
         self.goal_pose.x = msg.pose.position.x
         self.goal_pose.y = msg.pose.position.y
         self.goal_pose.theta = msg.pose.orientation.z
+
 
 
     # When the robot reaches the goal, analize if that is one the it shoud signal  
@@ -272,6 +318,7 @@ class led_manager(Node):
             self.led_goal_signal = True
         
 
+
         if self.goal_pose.theta == self.GHOST_GOAL: 
             
             self.led_goal_signal = False
@@ -281,13 +328,14 @@ class led_manager(Node):
 def main():
 
 
-    if node.is_emergency_stop: 
+    if node.user_stop_command: 
 
         led_color.data = node.RED
     
     else: 
 
-        if node.robot_state == 50: 
+
+        if node.robot_state == node.ROBOT_AUTONOMOUS: 
 
             led_color.data = node.BLUE
 
@@ -297,25 +345,36 @@ def main():
                 led_color.data = node.GREEN
 
 
-            if node.collision_detected == True: 
+        if node.robot_state == node.ROBOT_MANUAL: 
 
-                led_color.data = node.ORANGE
+            led_color.data = node.WHITE
+
+        
+        if node.robot_state == node.ROBOT_MISSION_COMPLETED:
+
+            led_color.data = node.PINK
 
 
-            if node.ultrasonic_disabled == True: 
+        if node.collision_detected == True: 
 
-                led_color.data = node.YELLOW
-    
-    
+            led_color.data = node.ORANGE
+
+
+        if node.ultrasonic_disabled == True: 
+
+            led_color.data = node.YELLOW
+
+
+
     node.led_color_pub.publish(led_color) 
 
 
     if debug_mode: 
 
-        node.get_logger().info(f"Color: {led_color}")
+        node.get_logger().info(f"Color: {led_color.data}")
         node.get_logger().info(f"Collision alert: {node.collision_detected}")
-        node.get_logger().info(f"Stop command: {node.is_emergency_stop}")
-        node.get_logger().info(f"Robot sate: {node.robot_state}")
+        node.get_logger().info(f"Stop command: {node.user_stop_command}")
+        node.get_logger().info(f"Robot state: {node.robot_state}")
         node.get_logger().info(f"Goal reached: {node.led_goal_reached}")
         node.get_logger().info(f"Waypoint goal: {node.led_goal_signal}\n")
 
@@ -329,12 +388,13 @@ if __name__ == '__main__':
         namespace='move_base',
         cli_args=['--debug'],
         enable_rosout=False, 
+        use_global_arguments=True, 
     )
 
     thread = threading.Thread(target=rclpy.spin, args=(node, ), daemon=True)
     thread.start()
 
-    rate = node.create_rate(10)
+    rate = node.create_rate(1)
 
     try: 
         while rclpy.ok(): 
