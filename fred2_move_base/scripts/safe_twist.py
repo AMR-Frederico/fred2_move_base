@@ -26,12 +26,12 @@ debug_mode = '--debug' in sys.argv
 node_path = '~/ros2_ws/src/fred2_move_base/config/move_base_params.yaml'
 node_group = 'safe_twist'
 
-smallest_reading = 1000
-
-stop_by_obstacle = False 
-
 
 class SafeTwistNode(Node):
+
+    smallest_reading = 1000
+
+    stop_by_obstacle = False 
 
     left_ultrasonic_distance = 1000
     right_ultrasonic_distance = 1000
@@ -46,11 +46,20 @@ class SafeTwistNode(Node):
 
     cmd_vel_safe = Twist()
     cmd_vel = Twist()
+    vel_timeout = False
 
     joy_connected = False
     
     robot_safety = False
-    robot_safety_msg = Bool()
+    robotSafety_msg = Bool()
+
+    userStop_msg = Bool()
+    collisionDetection_msg = Bool()
+    ultrasonicDisabled_msg = Bool()
+
+    braking_factor = 1
+
+
 
     def __init__(self, 
                  node_name: str, 
@@ -131,7 +140,7 @@ class SafeTwistNode(Node):
                                                   qos_profile)
         
 
-        self.distanceStop_pub = self.create_publisher(Bool, 
+        self.collisionDetection_pub = self.create_publisher(Bool, 
                                                       '/safety/abort/collision_alert', 
                                                       qos_profile)
         
@@ -257,6 +266,8 @@ class SafeTwistNode(Node):
         
         self.cmd_vel.linear.x = velocity.linear.x
         self.cmd_vel.angular.z = velocity.angular.z
+
+        self.last_vel_command_time = self.get_clock().now()
     
 
 
@@ -279,152 +290,158 @@ class SafeTwistNode(Node):
             self.cmd_vel_safe.angular.z = self.robot_vel.angular.z * self.MOTOR_BRAKE_FACTOR
 
 
-def main():
 
-    global smallest_reading, stop_by_obstacle
+    def ultrasonic_obstacle_check(self):
+        
 
-    if node.DISABLE_ULTRASONICS: 
-        stop_by_obstacle = False
-        braking_factor = 1
+        if( self.right_ultrasonic_distance < self.SAFE_DISTANCE or
+            self.left_ultrasonic_distance  < self.SAFE_DISTANCE or
+            self.back_ultrasonic_distance  < self.SAFE_DISTANCE ): 
 
-        node.get_logger().info('The ultrasonics sensors has been desable', once = True, throttle_duration_sec = 1.0)
+                self.stop_by_obstacle = True
 
-    else: 
+                self.get_logger().info('Obstacle detect! Stopping the robot!')
 
-        # if something is detected by the ultrasonics, stop the robot while the object is being detected
-        if (node.right_ultrasonic_distance < node.SAFE_DISTANCE or
-            node.left_ultrasonic_distance  < node.SAFE_DISTANCE or 
-            node.back_ultrasonic_distance  < node.SAFE_DISTANCE): 
 
-            stop_by_obstacle = True 
-
+        # Slows down the robot depending on the distance from the obstacle
         else: 
-            stop_by_obstacle = False
+            
+            distances = [self.right_ultrasonic_distance, self.left_ultrasonic_distance, self.back_ultrasonic_distance]
+            smallest_reading = min(distances)
 
 
-        if node.right_ultrasonic_distance < smallest_reading: 
+            # applies a braking factor based on the distance detected by the sensors
+            self.braking_factor = smallest_reading/(2 * self.SAFE_DISTANCE)
 
-            smallest_reading = node.right_ultrasonic_distance
+        
+            if self.braking_factor > 1: 
 
+                self.braking_factor = 1
+        
 
-        if node.left_ultrasonic_distance < smallest_reading: 
+            if self.braking_factor < 0.25: 
 
-            smallest_reading = node.left_ultrasonic_distance
-
-
-        if node.back_ultrasonic_distance < smallest_reading: 
-
-            smallest_reading = node.back_ultrasonic_distance 
-
-
-        # applies a braking factor based on the distance detected by the sensors     
-        braking_factor = smallest_reading/(2 * node.SAFE_DISTANCE)
+                self.braking_factor = 0
 
 
 
-        if braking_factor > 1: 
 
+    def vel_saturation(self): 
+        
+        if (self.cmd_vel_safe.linear.x > self.MAX_LINEAR_SPEED): 
+
+            self.cmd_vel_safe.linear.x = self.MAX_LINEAR_SPEED
+
+ 
+        if (self.cmd_vel_safe.linear.x < - self.MAX_LINEAR_SPEED):
+
+            self.cmd_vel_safe.linear.x = - self.MAX_LINEAR_SPEED 
+
+
+        if (self.cmd_vel_safe.angular.z > self.MAX_ANGULAR_SPEED): 
+
+            self.cmd_vel_safe.angular.z = self.MAX_ANGULAR_SPEED
+
+
+        if (self.cmd_vel_safe.angular.z < - self.MAX_ANGULAR_SPEED): 
+
+            self.cmd_vel_safe.angular.z = - self.MAX_ANGULAR_SPEED
+
+
+        
+
+
+    def safe_twist(self): 
+        
+        if self.DISABLE_ULTRASONICS: 
+            
+            self.stop_by_obstacle = False
             braking_factor = 1
         
-
-        if braking_factor < 0.5: 
-
-            braking_factor = 0
-        
-
-
-
-    if not node.user_abort_command: 
-
-        current_time = node.get_clock().now()
-
-        if (current_time - node.last_joy_connected).nanoseconds > 2e9 and node.joy_connected:
-
-            node.joy_connected = False
-            node.get_logger().warn('Joy connection set to FALSE due to a timeout (no message received within the last 2 seconds).')
-
-        print(node.robot_vel.linear.x)
-        
-
-        if stop_by_obstacle or not(node.joy_connected): 
-
-            # if something is detected by the ultrasonics, stops the robot while the object is being detected
-            node.cmd_vel_safe.linear.x = node.robot_vel.linear.x * node.MOTOR_BRAKE_FACTOR
-            node.cmd_vel_safe.angular.z = node.robot_vel.angular.z * node.MOTOR_BRAKE_FACTOR
-
+            self.get_logger().warn('The ultrasonic were deactivated')
+    
 
         else: 
-            # applies a braking factor based on the distance detected by the sensors
-            node.cmd_vel_safe.linear.x = node.cmd_vel.linear.x * braking_factor
-            node.cmd_vel_safe.angular.z = node.cmd_vel.angular.z * braking_factor 
+            
+            if not self.user_abort_command: 
+                
+                
+                current_time = self.get_clock().now()
 
-        print(node.cmd_vel_safe.linear.x)
+                # Timeout to reset the joy_connected status 
+                if (current_time - self.last_joy_connected).nanoseconds > 2e9 and self.joy_connected: 
+                    
+                    self.joy_connected = False
+                    self.get_logger().warn('Joy connection set to FALSE due to a timeout (no message received within the last 2 seconds).')
 
+                
 
-        # vel saturaton 
-        if (node.cmd_vel_safe.linear.x > node.MAX_LINEAR_SPEED): 
+                # Timeout to reset the velocity command
+                if (current_time - self.last_vel_command_time).nanoseconds > 2e9: 
+                    
+                    self.cmd_vel.angular.z = 0.0
+                    self.cmd_vel.linear.x = 0.0
 
-            node.cmd_vel_safe.linear.x = node.MAX_LINEAR_SPEED
+                    self.get_logger().warn('Reset vel due to a timeout (no message received within the last 2 seconds).')
+                
+                
+                self.ultrasonic_obstacle_check()
 
-
-        # vel saturaton 
-        if (node.cmd_vel_safe.linear.x < - node.MAX_LINEAR_SPEED):
-
-            node.cmd_vel_safe.linear.x = - node.MAX_LINEAR_SPEED 
-
-
-        # vel saturaton 
-        if (node.cmd_vel_safe.angular.z > node.MAX_ANGULAR_SPEED): 
-
-            node.cmd_vel_safe.angular.z = node.MAX_ANGULAR_SPEED
-
-
-        # vel saturaton 
-        if (node.cmd_vel_safe.angular.z < - node.MAX_ANGULAR_SPEED): 
-
-            node.cmd_vel_safe.angular.z = - node.MAX_ANGULAR_SPEED
-
-
-
-    userStop_msg = Bool()
-    userStop_msg.data = node.user_abort_command
-
-    distanceStop_msg = Bool()
-    distanceStop_msg.data = stop_by_obstacle
-
-    ultrasonicDisabled_msg = Bool()
-    ultrasonicDisabled_msg.data = node.DISABLE_ULTRASONICS
+                
+                if self.stop_by_obstacle or not self.joy_connected: 
+                    
+                    self.cmd_vel_safe.linear.x = self.robot_vel.linear.x * self.MOTOR_BRAKE_FACTOR
+                    self.cmd_vel_safe.angular.z = self.robot_vel.angular.z * self.MOTOR_BRAKE_FACTOR
 
 
 
-    if stop_by_obstacle or node.user_abort_command or not node.joy_connected: 
-
-        node.robot_safety = False
-    
-    else: 
-
-        node.robot_safety = True
-
-    
-    node.robot_safety_msg.data = node.robot_safety
+                else: 
+                    
+                    self.cmd_vel_safe.linear.x = self.cmd_vel.linear.x * self.braking_factor
+                    self.cmd_vel_safe.angular.z = self.cmd_vel.angular.z * self.braking_factor
 
 
-    node.robotSafety_pub.publish(node.robot_safety_msg)    
-    node.safeVel_pub.publish(node.cmd_vel_safe)
-    node.userStop_pub.publish(userStop_msg)
-    node.distanceStop_pub.publish(distanceStop_msg)
-    node.ultrasonicDisabled_pub.publish(ultrasonicDisabled_msg)
+
+                self.vel_saturation()
+        
+
+        
+        if self.stop_by_obstacle or self.user_abort_command or not self.joy_connected:
+
+            self.robot_safety = False
+        
+        else: 
+            
+            self.robot_safety = True
 
 
-    if debug_mode: 
 
-        node.get_logger().warn(f'Robot safety -> {node.robot_safety}')
-        node.get_logger().info(f'Emergency mode -> user comand abort: {node.user_abort_command} | collision detected: {stop_by_obstacle}')
-        node.get_logger().info(f'Emergency mode -> joy connected: {node.joy_connected} | ultrasonics disabled: {node.DISABLE_ULTRASONICS}')
-        node.get_logger().info(f'Ultrasonics -> left: {node.left_ultrasonic_distance} | right: {node.right_ultrasonic_distance} | Back: {node.back_ultrasonic_distance}')
-        node.get_logger().info(f'Robot velocity -> linear: {node.robot_vel.linear.x} | angular: {node.robot_vel.angular.z}')
-        node.get_logger().info(f'Velocity command -> linear: {node.cmd_vel.linear.x} | angular: {node.cmd_vel.angular.z} | braking_factor: {braking_factor}')
-        node.get_logger().info(f'Safe velocity command -> linear: {node.cmd_vel_safe.linear.x} | angular: {node.cmd_vel_safe.angular.z}\n')
+
+        self.robotSafety_msg.data = self.robot_safety
+        self.userStop_msg.data = self.user_abort_command
+        self.collisionDetection_msg.data = self.stop_by_obstacle
+        self.ultrasonicDisabled_msg.data = self.DISABLE_ULTRASONICS
+                    
+
+        self.safeVel_pub.publish(self.cmd_vel_safe)
+        self.userStop_pub.publish(self.userStop_msg)
+        self.robotSafety_pub.publish(self.robotSafety_msg)
+        self.collisionDetection_pub.publish(self.collisionDetection_msg)
+        self.ultrasonicDisabled_pub.publish(self.ultrasonicDisabled_msg)
+            
+        
+
+        if debug_mode: 
+
+            self.get_logger().warn(f'Robot safety -> {self.robot_safety}')
+            self.get_logger().info(f'Emergency mode -> user comand abort: {self.user_abort_command} | collision detected: {self.stop_by_obstacle}')
+            self.get_logger().info(f'Emergency mode -> joy connected: {self.joy_connected} | ultrasonics disabled: {self.DISABLE_ULTRASONICS}')
+            self.get_logger().info(f'Ultrasonics -> left: {self.left_ultrasonic_distance} | right: {self.right_ultrasonic_distance} | Back: {self.back_ultrasonic_distance}')
+            self.get_logger().info(f'Robot velocity -> linear: {self.robot_vel.linear.x} | angular: {self.robot_vel.angular.z}')
+            self.get_logger().info(f'Velocity command -> linear: {self.cmd_vel.linear.x} | angular: {self.cmd_vel.angular.z} | braking_factor: {self.braking_factor}')
+            self.get_logger().info(f'Safe velocity command -> linear: {self.cmd_vel_safe.linear.x} | angular: {self.cmd_vel_safe.angular.z}\n')
+
+
 
 
 if __name__ == '__main__':
@@ -456,7 +473,7 @@ if __name__ == '__main__':
 
     try: 
         while rclpy.ok(): 
-            main()
+            node.safe_twist()
             rate.sleep()
         
     except KeyboardInterrupt:
