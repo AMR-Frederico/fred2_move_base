@@ -14,13 +14,12 @@ from rclpy.context import Context
 from rclpy.node import Node
 from rcl_interfaces.msg import SetParametersResult
 
-from std_msgs.msg import Bool, Float32
+from std_msgs.msg import Bool, Float32, Int16
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 
 
 # Node execution arguments 
-disable_ultrasonics = '--disable_ultrasonics' in sys.argv
 debug_mode = '--debug' in sys.argv
 
 # Parameters file (yaml)
@@ -41,13 +40,17 @@ class SafeTwistNode(Node):
     user_abort_command = True
     abort_previous_flag = False
     
-    robot_safety = False
+    robot_user_abort = False
 
     robot_vel = Twist()
 
     cmd_vel_safe = Twist()
     cmd_vel = Twist()
 
+    joy_connected = False
+    
+    robot_safety = False
+    robot_safety_msg = Bool()
 
     def __init__(self, 
                  node_name: str, 
@@ -81,46 +84,67 @@ class SafeTwistNode(Node):
                                  self.rightUltrasonic_callback, 
                                  qos_profile)
         
+
         self.create_subscription(Float32, 
                                  '/sensor/range/ultrasonic/left', 
                                  self.leftUltrasonic_callback, 
                                  qos_profile)
         
+
         self.create_subscription(Float32, 
                                  '/sensor/range/ultrasonic/back', 
                                  self.backUltrasonic_callback, 
                                  qos_profile)
         
+
         self.create_subscription(Odometry, 
                                  '/odom', 
                                  self.odom_callback, 
                                  qos_profile)
         
+
         self.create_subscription(Twist, 
                                  '/cmd_vel', 
                                  self.cmdVel_callback, 
                                  qos_profile)
         
-        self.create_subscription(Bool, 
-                                 '/joy/controler/ps4/brake', 
+
+        self.create_subscription(Int16, 
+                                 '/joy/controller/ps4/brake', 
                                  self.abort_callback, 
                                  qos_profile)
+
+
+        self.create_subscription(Bool,
+                                 '/joy/controller/connected',
+                                 self.joyConnected_callback,
+                                 1)
+
         
         self.safeVel_pub = self.create_publisher(Twist, 
                                                 '/cmd_vel/safe', 
                                                 qos_profile)
 
+
         self.userStop_pub = self.create_publisher(Bool, 
                                                   '/safety/abort/user_command', 
                                                   qos_profile)
+        
 
         self.distanceStop_pub = self.create_publisher(Bool, 
                                                       '/safety/abort/collision_alert', 
                                                       qos_profile)
         
+
         self.ultrasonicDisabled_pub = self.create_publisher(Bool, 
                                                             '/safety/ultrasonic/disabled', 
                                                             qos_profile)
+
+
+        self.robotSafety_pub = self.create_publisher(Bool, 
+                                                     '/robot_safety', 
+                                                     qos_profile)
+
 
         # get params from the config file
         self.load_params(node_path, node_group)
@@ -128,6 +152,8 @@ class SafeTwistNode(Node):
 
 
         self.add_on_set_parameters_callback(self.parameters_callback)
+
+        self.last_joy_connected = self.get_clock().now()
 
 
 
@@ -153,6 +179,10 @@ class SafeTwistNode(Node):
         if param.name == 'max_angular_speed': 
             self.MAX_ANGULAR_SPEED = param.value
 
+        
+        if param.name =='disable_ultrasonics': 
+            self.DISABLE_ULTRASONICS = param.value
+
 
 
         return SetParametersResult(successful=True)
@@ -176,11 +206,21 @@ class SafeTwistNode(Node):
             self.get_logger().info(f'{param_name_lower}: {param_value}')
 
 
+
     def get_params(self): 
         self.SAFE_DISTANCE = self.get_parameter('safe_distance').value 
         self.MOTOR_BRAKE_FACTOR = self.get_parameter('motor_brake_factor').value
         self.MAX_LINEAR_SPEED = self.get_parameter('max_linear_speed').value
         self.MAX_ANGULAR_SPEED = self.get_parameter('max_angular_speed').value
+        self.DISABLE_ULTRASONICS = self.get_parameter('disable_ultrasonics').value
+
+
+
+    def joyConnected_callback(self, connection_status): 
+
+        self.joy_connected = connection_status.data
+
+        self.last_joy_connected = self.get_clock().now()
 
 
 
@@ -200,6 +240,7 @@ class SafeTwistNode(Node):
     def backUltrasonic_callback(self, distance): 
         
         self.back_ultrasonic_distance = distance.data
+
 
 
 
@@ -237,14 +278,12 @@ class SafeTwistNode(Node):
             self.cmd_vel_safe.linear.x = self.robot_vel.linear.x * self.MOTOR_BRAKE_FACTOR
             self.cmd_vel_safe.angular.z = self.robot_vel.angular.z * self.MOTOR_BRAKE_FACTOR
 
-        self.robot_safety = not self.user_abort_command 
-
 
 def main():
 
     global smallest_reading, stop_by_obstacle
 
-    if disable_ultrasonics: 
+    if node.DISABLE_ULTRASONICS: 
         stop_by_obstacle = False
         braking_factor = 1
 
@@ -282,6 +321,7 @@ def main():
         braking_factor = smallest_reading/(2 * node.SAFE_DISTANCE)
 
 
+
         if braking_factor > 1: 
 
             braking_factor = 1
@@ -292,11 +332,23 @@ def main():
             braking_factor = 0
         
 
-    if node.robot_safety: 
+
+
+    if not node.user_abort_command: 
+
+        current_time = node.get_clock().now()
+
+        if (current_time - node.last_joy_connected).nanoseconds > 2e9 and node.joy_connected:
+
+            node.joy_connected = False
+            node.get_logger().warn('Joy connection set to FALSE due to a timeout (no message received within the last 2 seconds).')
+
+        print(node.robot_vel.linear.x)
         
 
-        if stop_by_obstacle: 
-            # if something is detected by the ultrasonics, stop the robot while the object is being detected
+        if stop_by_obstacle or not(node.joy_connected): 
+
+            # if something is detected by the ultrasonics, stops the robot while the object is being detected
             node.cmd_vel_safe.linear.x = node.robot_vel.linear.x * node.MOTOR_BRAKE_FACTOR
             node.cmd_vel_safe.angular.z = node.robot_vel.angular.z * node.MOTOR_BRAKE_FACTOR
 
@@ -305,6 +357,8 @@ def main():
             # applies a braking factor based on the distance detected by the sensors
             node.cmd_vel_safe.linear.x = node.cmd_vel.linear.x * braking_factor
             node.cmd_vel_safe.angular.z = node.cmd_vel.angular.z * braking_factor 
+
+        print(node.cmd_vel_safe.linear.x)
 
 
         # vel saturaton 
@@ -339,8 +393,23 @@ def main():
     distanceStop_msg.data = stop_by_obstacle
 
     ultrasonicDisabled_msg = Bool()
-    ultrasonicDisabled_msg.data = disable_ultrasonics
+    ultrasonicDisabled_msg.data = node.DISABLE_ULTRASONICS
+
+
+
+    if stop_by_obstacle or node.user_abort_command or not node.joy_connected: 
+
+        node.robot_safety = False
     
+    else: 
+
+        node.robot_safety = True
+
+    
+    node.robot_safety_msg.data = node.robot_safety
+
+
+    node.robotSafety_pub.publish(node.robot_safety_msg)    
     node.safeVel_pub.publish(node.cmd_vel_safe)
     node.userStop_pub.publish(userStop_msg)
     node.distanceStop_pub.publish(distanceStop_msg)
@@ -349,11 +418,13 @@ def main():
 
     if debug_mode: 
 
-        node.get_logger().info(f'Emergency mode -> user comand abort: {node.user_abort_command} | collision detected: {stop_by_obstacle} | ultrasonics disabled: {disable_ultrasonics}')
+        node.get_logger().warn(f'Robot safety -> {node.robot_safety}')
+        node.get_logger().info(f'Emergency mode -> user comand abort: {node.user_abort_command} | collision detected: {stop_by_obstacle}')
+        node.get_logger().info(f'Emergency mode -> joy connected: {node.joy_connected} | ultrasonics disabled: {node.DISABLE_ULTRASONICS}')
         node.get_logger().info(f'Ultrasonics -> left: {node.left_ultrasonic_distance} | right: {node.right_ultrasonic_distance} | Back: {node.back_ultrasonic_distance}')
         node.get_logger().info(f'Robot velocity -> linear: {node.robot_vel.linear.x} | angular: {node.robot_vel.angular.z}')
-        node.get_logger().info(f'Velocity command -> linar: {node.cmd_vel.linear.x} | angular: {node.cmd_vel.angular.z} | braking_factor: {braking_factor}\n')
-        
+        node.get_logger().info(f'Velocity command -> linear: {node.cmd_vel.linear.x} | angular: {node.cmd_vel.angular.z} | braking_factor: {braking_factor}')
+        node.get_logger().info(f'Safe velocity command -> linear: {node.cmd_vel_safe.linear.x} | angular: {node.cmd_vel_safe.angular.z}\n')
 
 
 if __name__ == '__main__':
@@ -368,7 +439,7 @@ if __name__ == '__main__':
     node = SafeTwistNode(
         node_name='safe_twist',
         context=safe_context,
-        cli_args=['--debug', '--disable_ultrasonics'],
+        cli_args=['--debug'],
         namespace='move_base',
         enable_rosout=False
     )
@@ -381,7 +452,7 @@ if __name__ == '__main__':
     thread = threading.Thread(target=rclpy.spin, args=(node,), daemon=True)
     thread.start()
 
-    rate = node.create_rate(10)
+    rate = node.create_rate(1)
 
     try: 
         while rclpy.ok(): 
