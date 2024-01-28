@@ -12,7 +12,9 @@ from rclpy.node import Node
 from rclpy.context import Context 
 from rclpy.parameter import Parameter
 from rclpy.qos import QoSPresetProfiles, QoSProfile, QoSHistoryPolicy, QoSLivelinessPolicy, QoSReliabilityPolicy
+
 from rcl_interfaces.msg import SetParametersResult
+from rcl_interfaces.srv import GetParameters
 
 from std_msgs.msg import Int16, Bool
 from geometry_msgs.msg import Twist
@@ -21,12 +23,6 @@ from geometry_msgs.msg import Twist
 node_path = '~/ros2_ws/src/fred2_move_base/config/move_base_params.yaml'
 node_group = 'joy_esp_interface'
 
-cmd_vel = Twist()
-
-last_reset_odom = 0
-
-change_mode = Bool()
-last_mode = False
 
 # Check for cli_args 
 debug_mode = '--debug' in sys.argv
@@ -49,6 +45,16 @@ class JoyInterfaceNode(Node):
 
     # odometry
     reset_odom = 0
+
+
+    cmd_vel = Twist()
+
+    last_reset_odom = 0
+
+    change_mode = Bool()
+    last_mode = False
+
+
     
     def __init__(self, 
                  node_name: str, 
@@ -79,29 +85,30 @@ class JoyInterfaceNode(Node):
         )
 
         self.create_subscription(Int16, 
-                                 '/joy/controler/ps4/cmd_vel/linear', 
+                                 '/joy/controller/ps4/cmd_vel/linear', 
                                  self.velLinear_callback, 
                                  qos_profile)
         
         self.create_subscription(Int16, 
-                                 '/joy/controler/ps4/cmd_vel/angular', 
+                                 '/joy/controller/ps4/cmd_vel/angular', 
                                  self.velAngular_callback, 
                                  qos_profile)
         
-        # self.create_subscription(Bool, 
-        #                          '/machine_state/control_mode/manual', 
-        #                          self.manualMode_callback, 
-        #                          qos_profile)
+        self.create_subscription(Int16, 
+                                 '/machine_states/robot_state', 
+                                 self.manualMode_callback, 
+                                 qos_profile)
 
         self.create_subscription(Int16, 
-                                 '/joy/controler/ps4/circle', 
+                                 '/joy/controller/ps4/circle', 
                                  self.resetOdom_callback, 
                                  qos_profile)
 
         self.create_subscription(Int16, 
-                                 '/joy/controler/ps4/triangle', 
+                                 '/joy/controller/ps4/triangle', 
                                  self.switchMode_callback, 
                                  qos_profile)
+        
 
         self.vel_pub = self.create_publisher(Twist, '/cmd_vel', 1)      
 
@@ -121,6 +128,9 @@ class JoyInterfaceNode(Node):
 
         self.add_on_set_parameters_callback(self.parameters_callback)
 
+        
+        self.last_angular_vel_command_time = self.get_clock().now()
+        self.last_linear_vel_command_time = self.get_clock().now()
 
 
     def parameters_callback(self, params):
@@ -172,10 +182,52 @@ class JoyInterfaceNode(Node):
 
 
     def get_params(self):
+
         self.MAX_SPEED_JOY_LINEAR = self.get_parameter('max_speed_joy_linear').value
         self.MAX_SPEED_JOY_ANGULAR = self.get_parameter('max_speed_joy_angular').value
         self.MAX_VALUE_CONTROLLER = self.get_parameter('max_value_controller').value
         self.DRIFT_ANALOG_TOLERANCE = self.get_parameter('drift_analog_tolerance').value
+
+        # Get global params 
+
+        self.client = self.create_client(GetParameters, '/machine_states/main_robot/get_parameters')
+        self.client.wait_for_service()
+
+        request = GetParameters.Request()
+        request.names = ['manual', 'autonomous', 'in_goal', 'mission_completed', 'emergency']
+
+        future = self.client.call_async(request)
+        future.add_done_callback(self.callback_global_param)
+
+
+    
+    def callback_global_param(self, future):
+
+
+        try:
+
+            result = future.result()
+
+            self.ROBOT_MANUAL = result.values[0].integer_value
+            self.ROBOT_AUTONOMOUS = result.values[1].integer_value
+            self.ROBOT_IN_GOAL = result.values[2].integer_value
+            self.ROBOT_MISSION_COMPLETED = result.values[3].integer_value
+            self.ROBOT_EMERGENCY = result.values[4].integer_value
+
+
+            self.get_logger().info(f"\nGot global param ROBOT_MANUAL -> {self.ROBOT_MANUAL}")
+            self.get_logger().info(f"Got global param ROBOT_AUTONOMOUS -> {self.ROBOT_AUTONOMOUS}")
+            self.get_logger().info(f"Got global param ROBOT_IN GOAL -> {self.ROBOT_IN_GOAL}")
+            self.get_logger().info(f"Got global param ROBOT_MISSION_COMPLETED: {self.ROBOT_MISSION_COMPLETED}")
+            self.get_logger().info(f"Got global param ROBOT_EMERGENCY: {self.ROBOT_EMERGENCY}\n")
+
+
+
+        except Exception as e:
+
+            self.get_logger().warn("Service call failed %r" % (e,))
+
+
 
 
 
@@ -190,6 +242,8 @@ class JoyInterfaceNode(Node):
         else:
             
             self.controler_buttons['L_Y'] = 0
+        
+        self.last_angular_vel_command_time = self.get_clock().now()
     
 
 
@@ -203,12 +257,22 @@ class JoyInterfaceNode(Node):
         else:
             
             self.controler_buttons['R_X'] = 0
+        
+        self.last_linear_vel_command_time = self.get_clock().now()
 
 
 
-    # def manualMode_callback(self, manual_msg):
+    def manualMode_callback(self, msg):
 
-    #     self.manual_mode = manual_msg.data
+        robot_state = msg.data
+
+        if robot_state == self.ROBOT_MANUAL: 
+
+            self.manual_mode = True
+        
+        else: 
+
+            self.manual_mode = False
 
 
 
@@ -223,64 +287,81 @@ class JoyInterfaceNode(Node):
         self.switch_mode = mode_msg.data
 
 
-def main():
+    def main(self):
 
-    global last_reset_odom, last_mode
-    
-    #* speed control (anolog buttons)
-    # only send comands if manual mode is on 
-    vel_angular = 0
-    vel_linear = 0
-
-    # rule of three equating the maximum speed of the joy with that of the robot
-    vel_angular = node.controler_buttons['R_X'] * (node.MAX_SPEED_JOY_ANGULAR / node.MAX_VALUE_CONTROLLER)
-    vel_linear = node.controler_buttons['L_Y'] * (node.MAX_SPEED_JOY_LINEAR / node.MAX_VALUE_CONTROLLER)
-    
-
-    cmd_vel.linear.x = vel_linear
-    cmd_vel.angular.z = -1 * vel_angular #? Correção de sentido? 
-
-
-    if node.manual_mode:
+        current_time = self.get_clock().now()
         
-        node.vel_pub.publish(cmd_vel)
+        #* speed control (anolog buttons)
+        # only send comands if manual mode is on 
+        vel_angular = 0
+        vel_linear = 0
 
-    
-    #* reset odometry (circle buttom)
-    odom_reset = (node.reset_odom > last_reset_odom)
-    last_reset_odom = node.reset_odom
+        # rule of three equating the maximum speed of the joy with that of the robot
+        vel_angular = self.controler_buttons['R_X'] * (self.MAX_SPEED_JOY_ANGULAR / self.MAX_VALUE_CONTROLLER)
+        vel_linear = self.controler_buttons['L_Y'] * (self.MAX_SPEED_JOY_LINEAR / self.MAX_VALUE_CONTROLLER)
+        
 
-
-    # reset the state of the main machine states, for the initial one 
-    if odom_reset: 
-
-        missionCompleted_msg = Bool()
-        missionCompleted_msg.data = False
-        node.missionCompleted_pub.publish(missionCompleted_msg)
-    
-
-    reset_msg = Bool()
-    reset_msg.data = odom_reset
+        # Check if the last linear velocity command message was received within the last 2 seconds
+        if (current_time - self.last_linear_vel_command_time).nanoseconds > 2e9:
+            
+            self.get_logger().warn('Velocity angular command reset due to a timeout (no message received within the last 2 seconds).')
+            vel_angular = 0.0
 
 
-    node.resetOdom_pub.publish(reset_msg)
-    node.goalsReset_pub.publish(reset_msg)
+        # Check if the last angular velocity command message was received within the last 2 seconds
+        if (current_time - self.last_angular_vel_command_time).nanoseconds > 2e9:
+            
+            self.get_logger().warn('Velocity linear command reset due to a timeout (no message received within the last 2 seconds).')
+            vel_linear = 0.0
 
 
-    #* switch mode (triangle buttom)
-    change_mode.data = node.switch_mode > last_mode
-    
-    last_mode = node.switch_mode 
+
+        self.cmd_vel.linear.x = vel_linear
+        self.cmd_vel.angular.z = -1 * vel_angular #? Correção de sentido? 
+
+        
+        
+        if self.manual_mode:
+            
+            self.vel_pub.publish(self.cmd_vel)
 
 
-    node.switchMode_pub.publish(change_mode)
+        
+        #* reset odometry (circle buttom)
+        odom_reset = (self.reset_odom > self.last_reset_odom)
+        self.last_reset_odom = self.reset_odom
 
-    
-    if debug_mode: 
-        node.get_logger().info(f'Velocity -> linear:{vel_linear} | angular:{vel_angular}\n')
-        node.get_logger().info(f'Reset odometry -> {odom_reset}')
-        node.get_logger().info(f'Switch mode -> {change_mode.data}')
-        # node.get_logger().info(f'Manual mode -> {node.manual_mode}')
+
+        # reset the state of the main machine states, for the initial one 
+        if odom_reset: 
+
+            missionCompleted_msg = Bool()
+            missionCompleted_msg.data = False
+            self.missionCompleted_pub.publish(missionCompleted_msg)
+        
+
+        reset_msg = Bool()
+        reset_msg.data = odom_reset
+
+
+        self.resetOdom_pub.publish(reset_msg)
+        self.goalsReset_pub.publish(reset_msg)
+
+
+        #* switch mode (triangle buttom)
+        self.change_mode.data = self.switch_mode > self.last_mode
+        
+        self.last_mode = self.switch_mode 
+
+
+        self.switchMode_pub.publish(self.change_mode)
+
+        
+        if debug_mode: 
+            self.get_logger().info(f'Velocity -> linear:{vel_linear} | angular:{vel_angular}\n')
+            self.get_logger().info(f'Reset odometry -> {odom_reset}')
+            self.get_logger().info(f'Switch mode -> {self.change_mode.data}')
+            self.get_logger().info(f'Manual mode -> {self.manual_mode}')
 
 
 if __name__ == '__main__': 
@@ -297,11 +378,11 @@ if __name__ == '__main__':
     thread = threading.Thread(target=rclpy.spin, args=(node,), daemon=True)
     thread.start()
 
-    rate = node.create_rate(10)
+    rate = node.create_rate(1)
 
     try: 
         while rclpy.ok(): 
-            main()
+            node.main()
             rate.sleep()
         
     except KeyboardInterrupt:
