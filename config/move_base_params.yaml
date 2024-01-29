@@ -7,7 +7,7 @@ led_manager:
 
   white: 0          #ffffff
   blue: 5           #0000ff
-  yellow: 5         #ffff00
+  yellow: 1         #ffff00
   pink: 4           #ff0084
   green: 3          #00ff00
   orange: 6         #ffa500
