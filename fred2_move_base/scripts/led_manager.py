@@ -132,10 +132,10 @@ class led_manager(Node):
                                  10 )
         
 
-        self.create_subscription(Bool, 
-                                 '/goal_manager/goal/reached', 
-                                 self.goal_reached_callback, 
-                                 10 )
+        # self.create_subscription(Bool, 
+        #                          '/goal_manager/goal/reached', 
+        #                          self.goal_reached_callback, 
+        #                          10 )
         
         self.create_subscription(Bool, 
                                  '/odom/reset', 
@@ -238,7 +238,7 @@ class led_manager(Node):
         self.BLACK = self.get_parameter('black').value 
         self.CYAN = self.get_parameter('cyan').value
         self.PURPLE = self.get_parameter('purple').value
-        self.LIGHT_GREEN = self.get_parameter('light_green')    
+        self.LIGHT_GREEN = self.get_parameter('light_green').value    
 
 
         self.WAYPOINT_GOAL = self.get_parameter('waypoint_goal').value
@@ -339,6 +339,8 @@ class led_manager(Node):
 
 
 
+
+
     def goal_current_callback(self, msg):
         
         self.goal_pose.x = msg.pose.position.x
@@ -358,32 +360,32 @@ class led_manager(Node):
 
 
     # When the robot reaches the goal, analize if that is one the it shoud signal  
-    def goal_reached_callback(self, msg):
+    # def goal_reached_callback(self, msg):
 
-        self.goal_reached = msg.data
+    #     self.goal_reached = msg.data
 
-        if (self.goal_reached == True) and (self.last_goal_reached == False): 
+    #     if (self.goal_reached == True) and (self.last_goal_reached == False): 
             
-            self.start_time = self.get_clock().now()
-            self.led_goal_reached = True
+    #         self.start_time = self.get_clock().now()
+    #         self.led_goal_reached = True
         
-        else: 
+    #     else: 
 
-            self.led_goal_reached = False
+    #         self.led_goal_reached = False
 
-        self.last_goal_reached = self.goal_reached
+    #     self.last_goal_reached = self.goal_reached
 
 
-        # For keeping the signal on for a determined time
-        if (self.get_clock().now() - self.start_time) > self.LED_ON_TIME: 
+    #     # For keeping the signal on for a determined time
+    #     if (self.get_clock().now() - self.start_time) > self.LED_ON_TIME: 
             
-            self.led_goal_reached = False 
+    #         self.led_goal_reached = False 
 
         
 
-        if self.goal_pose.theta == self.WAYPOINT_GOAL: 
+    #     if self.goal_pose.theta == self.WAYPOINT_GOAL: 
         
-            self.led_goal_signal = True
+    #         self.led_goal_signal = True
         
 
 
@@ -394,6 +396,32 @@ class led_manager(Node):
         
  
     def led_manager(self):
+        
+        
+
+        # Evaluate the sinalization for the goal reached 
+
+        if self.robot_state == self.ROBOT_IN_GOAL: 
+            
+            self.led_goal_reached = True
+            print('NO GOALLLL LIGA O LEDDD ')
+            self.start_time = self.get_clock().now()
+
+
+        # For keeping the signal on for a determined time
+        if (self.get_clock().now() - self.start_time) > self.LED_ON_TIME: 
+            
+            self.led_goal_reached = False 
+            print('DESLIGA O LEDDD')
+
+        
+
+        if self.goal_pose.theta == self.WAYPOINT_GOAL: 
+        
+            self.led_goal_signal = True
+
+
+
                 
 
         #* Colors for the robot state: 
@@ -416,14 +444,19 @@ class led_manager(Node):
                     self.led_color.data = self.GREEN
 
 
+
+                if self.robot_state == self.ROBOT_MISSION_COMPLETED:
+
+                    self.led_color.data = self.CYAN
+
+
+
+
             if self.robot_state == self.ROBOT_MANUAL: 
 
                 self.led_color.data = self.WHITE
 
             
-            if self.robot_state == self.ROBOT_MISSION_COMPLETED:
-
-                self.led_color.data = self.CYAN
 
 
         
@@ -473,7 +506,6 @@ class led_manager(Node):
             self.get_logger().info(f"Joy connected: {self.joy_connected}")
             self.get_logger().info(f"Ultrasonics disabled: {self.ultrasonic_disabled}")
             self.get_logger().info(f"Robot state: {self.robot_state}")
-            self.get_logger().info(f"Goal reached: {self.led_goal_reached}")
             self.get_logger().info(f"Waypoint goal: {self.led_goal_signal}\n")
 
 
