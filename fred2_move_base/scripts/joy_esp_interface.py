@@ -54,6 +54,12 @@ class JoyInterfaceNode(Node):
     change_mode = Bool()
     last_mode = False
 
+    # starts with randon value 
+    ROBOT_MANUAL = 1000
+    ROBOT_AUTONOMOUS = 1000
+    ROBOT_IN_GOAL = 1000
+    ROBOT_MISSION_COMPLETED = 1000
+    ROBOT_EMERGENCY = 1000
 
     
     def __init__(self, 
