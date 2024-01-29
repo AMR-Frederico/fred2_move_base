@@ -5,14 +5,17 @@
 
 led_manager:
 
-  white: 0 
-  blue: 5 
-  yellow: 5 
-  pink: 4 
-  green: 3 
-  orange: 6 
-  red: 2
-  black: -1
+  white: 0          #ffffff
+  blue: 5           #0000ff
+  yellow: 5         #ffff00
+  pink: 4           #ff0084
+  green: 3          #00ff00
+  orange: 6         #ffa500
+  red: 2            #ff0000
+  black: -1         #000000
+  cyan: 7           #00A8FF
+  purple: 8         #800080 
+  light_green: 9    #00fa9a
 
   waypoint_goal: 0  # Goals points that the robot must signal
   ghost_goal: 1 
@@ -24,7 +27,7 @@ led_manager:
 
 safe_twist: 
 
-  safe_distance: 100    # distance in cm 
+  safe_distance: 100.0    # distance in cm 
  
   motor_brake_factor: -1 
  
