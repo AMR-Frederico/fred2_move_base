@@ -153,6 +153,11 @@ class SafeTwistNode(Node):
         self.robotSafety_pub = self.create_publisher(Bool, 
                                                      '/robot_safety', 
                                                      qos_profile)
+        
+
+        self.joyConnect_pub = self.create_publisher(Bool, 
+                                                    '/joy/controller/connected', 
+                                                    1)
 
 
         # get params from the config file
@@ -163,6 +168,7 @@ class SafeTwistNode(Node):
         self.add_on_set_parameters_callback(self.parameters_callback)
 
         self.last_joy_connected = self.get_clock().now()
+        self.last_vel_command_time = self.get_clock().now()
 
 
 
@@ -306,6 +312,8 @@ class SafeTwistNode(Node):
         # Slows down the robot depending on the distance from the obstacle
         else: 
             
+            self.stop_by_obstacle = False
+
             distances = [self.right_ultrasonic_distance, self.left_ultrasonic_distance, self.back_ultrasonic_distance]
             smallest_reading = min(distances)
 
@@ -325,30 +333,6 @@ class SafeTwistNode(Node):
 
 
 
-
-    def vel_saturation(self): 
-        
-        if (self.cmd_vel_safe.linear.x > self.MAX_LINEAR_SPEED): 
-
-            self.cmd_vel_safe.linear.x = self.MAX_LINEAR_SPEED
-
- 
-        if (self.cmd_vel_safe.linear.x < - self.MAX_LINEAR_SPEED):
-
-            self.cmd_vel_safe.linear.x = - self.MAX_LINEAR_SPEED 
-
-
-        if (self.cmd_vel_safe.angular.z > self.MAX_ANGULAR_SPEED): 
-
-            self.cmd_vel_safe.angular.z = self.MAX_ANGULAR_SPEED
-
-
-        if (self.cmd_vel_safe.angular.z < - self.MAX_ANGULAR_SPEED): 
-
-            self.cmd_vel_safe.angular.z = - self.MAX_ANGULAR_SPEED
-
-
-        
 
 
     def safe_twist(self): 
@@ -373,6 +357,10 @@ class SafeTwistNode(Node):
                     
                     self.joy_connected = False
                     self.get_logger().warn('Joy connection set to FALSE due to a timeout (no message received within the last 2 seconds).')
+
+                    joy_status_msg = Bool()
+                    joy_status_msg.data = False
+                    self.joyConnect_pub.publish(joy_status_msg)
 
                 
 
@@ -401,8 +389,10 @@ class SafeTwistNode(Node):
                     self.cmd_vel_safe.angular.z = self.cmd_vel.angular.z * self.braking_factor
 
 
-
-                self.vel_saturation()
+                # vel saturation
+                self.cmd_vel_safe.linear.x = max(min(self.cmd_vel_safe.linear.x, self.MAX_LINEAR_SPEED), - self.MAX_LINEAR_SPEED)
+                self.cmd_vel_safe.angular.z = max(min(self.cmd_vel_safe.angular.z, self.MAX_ANGULAR_SPEED), - self.MAX_ANGULAR_SPEED)
+                
         
 
         
