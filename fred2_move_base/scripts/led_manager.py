@@ -23,12 +23,18 @@ from geometry_msgs.msg import PoseStamped, Pose2D
 led_path = '~/ros2_ws/src/fred2_move_base/config/move_base_params.yaml'
 led_group = 'led_manager'
 
-led_color = Int16()  # Publisher message
 
 # Check for cli_args 
 debug_mode = '--debug' in sys.argv
 
+
+
+
 class led_manager(Node): 
+    
+
+    led_color = Int16()
+    led_debug = Int16()
 
     
     robot_state = -5    # Robot state, random initial value
@@ -36,8 +42,8 @@ class led_manager(Node):
     last_goal_reached = False
 
     user_stop_command = True
-
     collision_detected = False
+    joy_connected = False
 
     ultrasonic_disabled = False
 
@@ -46,7 +52,23 @@ class led_manager(Node):
     led_goal_reached = False
     led_goal_signal = False
 
+    last_robot_emergency = False
+
+    odom_reset = False
+
+
+
     LED_ON_TIME = Duration(seconds=1) # It's also possible to specify nanoseconds
+    LED_EMERGENGY_TIME = Duration(seconds=1)
+
+
+
+    # starts with randon value 
+    ROBOT_MANUAL = 1000
+    ROBOT_AUTONOMOUS = 1000
+    ROBOT_IN_GOAL = 1000
+    ROBOT_MISSION_COMPLETED = 1000
+    ROBOT_EMERGENCY = 1000
 
     
     def __init__(self, 
@@ -74,47 +96,67 @@ class led_manager(Node):
         self.start_time = self.get_clock().now()
 
 
-        self.collisionDetection_sub = self.create_subscription(
-                                    Bool,
-                                    '/safety/abort/collision_alert', 
-                                    self.collision_callback,
-                                    10 )
+        self.create_subscription(Bool,
+                                 '/safety/abort/collision_alert', 
+                                 self.collision_callback,
+                                 10 )
 
-        self.manualAbort_sub = self.create_subscription(
-                                    Bool, 
-                                    '/safety/abort/user_command',
-                                    self.manual_abort_callback,
-                                    10 )
-        
-        self.ultrasonicStatus_sub = self.create_subscription(Bool, 
-                                                             '/safety/ultrasonic/disabled', 
-                                                             self.ultrasonicStatus_callback, 
-                                                             10 )
-        
-        self.robotState_sub = self.create_subscription(
-                                    Int16,
-                                    '/machine_states/robot_state',
-                                    self.robot_state_callback, 
-                                    10 )
 
-        self.currentGoal_sub = self.create_subscription(
-                                    PoseStamped,
-                                    '/goal_manager/goal/current',
-                                    self.goal_current_callback, 
-                                    10 )
+        self.create_subscription(Bool, 
+                                 '/safety/abort/user_command',
+                                 self.manual_abort_callback,
+                                 10 )
         
-        self.goalReached_sub = self.create_subscription(
-                                    Bool, 
-                                    '/goal_manager/goal/reached', 
-                                    self.goal_reached_callback, 
-                                    10 )
+
+        self.create_subscription(Bool, 
+                                 '/safety/ultrasonic/disabled', 
+                                 self.ultrasonicStatus_callback, 
+                                 10 )
         
         
-        self.led_color_pub = self.create_publisher(Int16, 
+        self.create_subscription(Bool, 
+                                 '/joy/controller/connected', 
+                                 self.joyConnected_callback, 
+                                 10 )
+
+        
+        self.create_subscription(Int16,
+                                 '/machine_states/robot_state',
+                                 self.robot_state_callback, 
+                                 10 )
+        
+
+        self.create_subscription(PoseStamped,
+                                 '/goal_manager/goal/current',
+                                 self.goal_current_callback, 
+                                 10 )
+        
+
+        self.create_subscription(Bool, 
+                                 '/goal_manager/goal/reached', 
+                                 self.goal_reached_callback, 
+                                 10 )
+        
+        self.create_subscription(Bool, 
+                                 '/odom/reset', 
+                                 self.odom_reset_callback, 
+                                 10)
+        
+
+        self.ledColor_pub = self.create_publisher(Int16, 
                                                     '/cmd/led_strip/color', 
                                                     10 )
+        
+
+
+
+        self.ledDebug_pub = self.create_publisher(Int16, 
+                                                   '/cmd/led_strip/debug/color', 
+                                                   10 )
+        
 
         
+
         self.add_on_set_parameters_callback(self.parameters_callback)
 
 
@@ -158,6 +200,18 @@ class led_manager(Node):
         if param.name == 'black': 
             self.BLACK = param.value
 
+
+        if param.name == 'cyan': 
+            self.CYAN = param.value
+
+
+        if param.name == 'purple': 
+            self.PURPLE = param.value    
+
+
+        if param.name == 'light_green': 
+            self.LIGHT_GREEN = param.value        
+
         
         if param.name == 'waypoint_goal': 
             self.WAYPOINT_GOAL = param.value
@@ -182,7 +236,11 @@ class led_manager(Node):
         self.RED = self.get_parameter('red').value
         self.GREEN = self.get_parameter('green').value 
         self.BLACK = self.get_parameter('black').value 
-        
+        self.CYAN = self.get_parameter('cyan').value
+        self.PURPLE = self.get_parameter('purple').value
+        self.LIGHT_GREEN = self.get_parameter('light_green')    
+
+
         self.WAYPOINT_GOAL = self.get_parameter('waypoint_goal').value
         self.GHOST_GOAL = self.get_parameter('ghost_goal').value
 
@@ -214,7 +272,7 @@ class led_manager(Node):
             self.ROBOT_EMERGENCY = result.values[4].integer_value
 
 
-            self.get_logger().info(f"\nGot global param ROBOT_MANUAL -> {self.ROBOT_MANUAL}")
+            self.get_logger().info(f"Got global param ROBOT_MANUAL -> {self.ROBOT_MANUAL}")
             self.get_logger().info(f"Got global param ROBOT_AUTONOMOUS -> {self.ROBOT_AUTONOMOUS}")
             self.get_logger().info(f"Got global param ROBOT_IN GOAL -> {self.ROBOT_IN_GOAL}")
             self.get_logger().info(f"Got global param ROBOT_MISSION_COMPLETED: {self.ROBOT_MISSION_COMPLETED}")
@@ -288,6 +346,16 @@ class led_manager(Node):
         self.goal_pose.theta = msg.pose.orientation.z
 
 
+    def joyConnected_callback(self, msg): 
+        
+        self.joy_connected = msg.data
+
+
+
+    def odom_reset_callback(self, msg): 
+        
+        self.odom_reset = msg.data
+
 
     # When the robot reaches the goal, analize if that is one the it shoud signal  
     def goal_reached_callback(self, msg):
@@ -325,58 +393,88 @@ class led_manager(Node):
         
         
  
-def main():
+    def led_manager(self):
+                
 
+        #* Colors for the robot state: 
 
-    if node.user_stop_command: 
+        if self.robot_state == self.ROBOT_EMERGENCY: 
 
-        led_color.data = node.RED
-    
-    else: 
-
-
-        if node.robot_state == node.ROBOT_AUTONOMOUS: 
-
-            led_color.data = node.BLUE
-
-
-            if (node.led_goal_reached == True) and (node.led_goal_signal == True):
-
-                led_color.data = node.GREEN
-
-
-        if node.robot_state == node.ROBOT_MANUAL: 
-
-            led_color.data = node.WHITE
+            self.led_color.data = self.RED
 
         
-        if node.robot_state == node.ROBOT_MISSION_COMPLETED:
-
-            led_color.data = node.PINK
+        else: 
 
 
-        if node.collision_detected == True: 
+            if self.robot_state == self.ROBOT_AUTONOMOUS: 
 
-            led_color.data = node.ORANGE
-
-
-        if node.ultrasonic_disabled == True: 
-
-            led_color.data = node.YELLOW
+                self.led_color.data = self.BLUE
 
 
+                if (self.led_goal_reached == True) and (self.led_goal_signal == True):
 
-    node.led_color_pub.publish(led_color) 
+                    self.led_color.data = self.GREEN
 
 
-    if debug_mode: 
+            if self.robot_state == self.ROBOT_MANUAL: 
 
-        node.get_logger().info(f"Color: {led_color.data}")
-        node.get_logger().info(f"Collision alert: {node.collision_detected}")
-        node.get_logger().info(f"Stop command: {node.user_stop_command}")
-        node.get_logger().info(f"Robot state: {node.robot_state}")
-        node.get_logger().info(f"Goal reached: {node.led_goal_reached}")
-        node.get_logger().info(f"Waypoint goal: {node.led_goal_signal}\n")
+                self.led_color.data = self.WHITE
+
+            
+            if self.robot_state == self.ROBOT_MISSION_COMPLETED:
+
+                self.led_color.data = self.CYAN
+
+
+        
+        #* Colors for debug the robot states:
+                
+        if self.collision_detected: 
+
+            self.led_debug.data = self.ORANGE
+        
+
+        elif self.user_stop_command: 
+            
+            self.led_debug.data = self.PINK
+        
+
+        elif not self.joy_connected: 
+
+            self.led_debug.data = self.PURPLE
+
+
+        elif self.ultrasonic_disabled: 
+
+            self.led_debug.data = self.YELLOW
+        
+        
+        elif self.odom_reset: 
+            
+            self.led_debug.data = self.LIGHT_GREEN
+
+
+        else: 
+            
+            self.led_debug.data = self.BLACK
+
+
+
+        self.ledColor_pub.publish(self.led_color) 
+        self.ledDebug_pub.publish(self.led_debug)
+
+
+        if debug_mode: 
+
+            self.get_logger().info(f"Color: {self.led_color.data}")
+            self.get_logger().info(f"Debug color: {self.led_debug.data}")
+            self.get_logger().info(f"Collision alert: {self.collision_detected}")
+            self.get_logger().info(f"Stop command: {self.user_stop_command}")
+            self.get_logger().info(f"Joy connected: {self.joy_connected}")
+            self.get_logger().info(f"Ultrasonics disabled: {self.ultrasonic_disabled}")
+            self.get_logger().info(f"Robot state: {self.robot_state}")
+            self.get_logger().info(f"Goal reached: {self.led_goal_reached}")
+            self.get_logger().info(f"Waypoint goal: {self.led_goal_signal}\n")
 
 
 if __name__ == '__main__':
@@ -399,7 +497,7 @@ if __name__ == '__main__':
     try: 
         while rclpy.ok(): 
             
-            main()
+            node.led_manager()
             rate.sleep()
         
     except KeyboardInterrupt:
