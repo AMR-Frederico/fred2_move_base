@@ -404,7 +404,6 @@ class led_manager(Node):
         if self.robot_state == self.ROBOT_IN_GOAL: 
             
             self.led_goal_reached = True
-            print('NO GOALLLL LIGA O LEDDD ')
             self.start_time = self.get_clock().now()
 
 
@@ -412,7 +411,6 @@ class led_manager(Node):
         if (self.get_clock().now() - self.start_time) > self.LED_ON_TIME: 
             
             self.led_goal_reached = False 
-            print('DESLIGA O LEDDD')
 
         
 
