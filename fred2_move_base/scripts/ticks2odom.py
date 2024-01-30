@@ -76,11 +76,20 @@ class OdometryNode(Node):
                          start_parameter_services=start_parameter_services, 
                          parameter_overrides=parameter_overrides)
         
+
         # quality protocol -> the node must not lose any message 
         qos_profile = QoSProfile(
             reliability=QoSReliabilityPolicy.RELIABLE, 
             history=QoSHistoryPolicy.KEEP_LAST, 
             depth=1
+        )
+
+
+        # quality protocol -> the node must not lose any message 
+        imu_qos_profile = QoSProfile(
+            reliability=QoSReliabilityPolicy.RELIABLE, 
+            history=QoSHistoryPolicy.KEEP_LAST, 
+            depth=5
         )
 
         self.create_subscription(Int32, 
@@ -96,20 +105,24 @@ class OdometryNode(Node):
         self.create_subscription(Imu, 
                                  '/sensor/orientation/imu', 
                                  self.heading_callback, 
-                                 qos_profile)
+                                 imu_qos_profile)
         
         self.create_subscription(Bool, 
                                  '/odom/reset', 
                                  self.odomReset_callback, 
                                  qos_profile)
         
+
         self.odom_pub = self.create_publisher(Odometry, '/odom', qos_profile)
+
 
         self.load_params(node_path, node_group)
         self.get_params()
 
+
         self.last_time = self.get_clock().now()
         
+
         self.odom_broadcaster = TransformBroadcaster(self)
         self.base_link_broadcaster = TransformBroadcaster(self)
 
@@ -246,8 +259,8 @@ class OdometryNode(Node):
         # self.theta = (self.theta + self.delta_theta) % (2 * pi) # determinate robot heading by encoder 
 
         if self.reset_odom: 
-            self.x_pos = 0
-            self.y_pos = 0
+            self.x_pos = 0.0
+            self.y_pos = 0.0
             self.heading_offset = self.robot_heading
 
 
@@ -371,7 +384,7 @@ if __name__ == '__main__':
     thread = threading.Thread(target=rclpy.spin, args=(node,), daemon=True)
     thread.start()
 
-    rate = node.create_rate(10)
+    rate = node.create_rate(1)
 
     try: 
         while rclpy.ok(): 
