@@ -98,37 +98,37 @@ class led_manager(Node):
         self.create_subscription(Bool,
                                  '/safety/abort/collision_alert', 
                                  self.collision_callback,
-                                 10 )
+                                 5 )
 
 
         self.create_subscription(Bool, 
                                  '/safety/abort/user_command',
                                  self.manual_abort_callback,
-                                 10 )
+                                 5 )
         
 
         self.create_subscription(Bool, 
                                  '/safety/ultrasonic/disabled', 
                                  self.ultrasonicStatus_callback, 
-                                 10 )
+                                 5 )
         
         
         self.create_subscription(Bool, 
                                  '/joy/controller/connected', 
                                  self.joyConnected_callback, 
-                                 10 )
+                                 5 )
 
         
         self.create_subscription(Int16,
                                  '/machine_states/robot_state',
                                  self.robot_state_callback, 
-                                 10 )
+                                 5 )
         
 
         self.create_subscription(PoseStamped,
                                  '/goal_manager/goal/current',
                                  self.goal_current_callback, 
-                                 10 )
+                                 5 )
         
 
         # self.create_subscription(Bool, 
@@ -139,19 +139,19 @@ class led_manager(Node):
         self.create_subscription(Bool, 
                                  '/odom/reset', 
                                  self.odom_reset_callback, 
-                                 10)
+                                 5)
         
 
         self.ledColor_pub = self.create_publisher(Int16, 
                                                     '/cmd/led_strip/color', 
-                                                    10 )
+                                                    5 )
         
 
 
 
         self.ledDebug_pub = self.create_publisher(Int16, 
                                                    '/cmd/led_strip/debug/color', 
-                                                   10 )
+                                                   5 )
         
 
         
@@ -388,9 +388,6 @@ class led_manager(Node):
         
 
 
-        if self.goal_pose.theta == self.GHOST_GOAL: 
-            
-            self.led_goal_signal = False
         
         
  
@@ -402,7 +399,6 @@ class led_manager(Node):
 
         if self.robot_state == self.ROBOT_IN_GOAL: 
 
-            self.get_logger().warn('GOAL SIGNAL -> LED ON')
             
             self.led_goal_reached = True
             self.start_time = self.get_clock().now()
@@ -412,8 +408,6 @@ class led_manager(Node):
         if (self.get_clock().now() - self.start_time) > self.LED_ON_TIME: 
             
             self.led_goal_reached = False 
-            self.get_logger().warn('GOAL SIGNAL -> LED OFF')
-
         
 
         if self.goal_pose.theta == self.WAYPOINT_GOAL: 
@@ -421,6 +415,10 @@ class led_manager(Node):
             self.led_goal_signal = True
 
 
+        if self.goal_pose.theta == self.GHOST_GOAL: 
+            
+            self.led_goal_signal = False
+            self.get_logger().warn('GHOST goal')
 
                 
 
@@ -441,13 +439,14 @@ class led_manager(Node):
 
                 if (self.led_goal_reached == True) and (self.led_goal_signal == True):
 
+                    self.get_logger().warn('GOAL SIGNAL -> LED ON')
                     self.led_color.data = self.GREEN
 
 
 
-                if self.robot_state == self.ROBOT_MISSION_COMPLETED:
+            if self.robot_state == self.ROBOT_MISSION_COMPLETED:
 
-                    self.led_color.data = self.CYAN
+                self.led_color.data = self.CYAN
 
 
 
