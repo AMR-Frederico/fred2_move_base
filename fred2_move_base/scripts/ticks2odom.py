@@ -32,6 +32,8 @@ node_group = 'odometry'
 # Node execution arguments 
 debug_mode = '--debug' in sys.argv
 
+publish_tf = '--publish-tf' in sys.argv         # For robot localization isn't necessary publish the TF
+
 class OdometryNode(Node):
 
     left_wheels_ticks = 0
@@ -122,12 +124,14 @@ class OdometryNode(Node):
 
         self.last_time = self.get_clock().now()
         
+        
+        self.add_on_set_parameters_callback(self.parameters_callback)
+
 
         self.odom_broadcaster = TransformBroadcaster(self)
         self.base_link_broadcaster = TransformBroadcaster(self)
 
 
-        self.add_on_set_parameters_callback(self.parameters_callback)
 
 
 
@@ -277,8 +281,15 @@ class OdometryNode(Node):
             self.angular_vel_theta = self.delta_theta / self.elapse_time
         
 
-        self.odom_transform()
+
         self.odom_msg()
+        
+
+
+        if publish_tf:
+        
+            self.odom_transform()
+
 
 
         self.last_left_ticks = self.left_wheels_ticks
@@ -305,6 +316,9 @@ class OdometryNode(Node):
         odom_msg.pose.pose.position.x = self.x_pos
         odom_msg.pose.pose.position.y = self.y_pos
         odom_msg.pose.pose.position.z = 0.0
+
+        # Calculate quaternion from Euler angles
+        self.odom_quat = tf3d.euler.euler2quat(0, 0, self.theta)
 
         odom_msg.pose.pose.orientation.x = self.odom_quat[1]
         odom_msg.pose.pose.orientation.y = self.odom_quat[2]
@@ -334,8 +348,6 @@ class OdometryNode(Node):
         odom_tf.transform.translation.y = self.y_pos 
         odom_tf.transform.translation.z = 0.0
 
-        # Calculate quaternion from Euler angles
-        self.odom_quat = tf3d.euler.euler2quat(0, 0, self.theta)
 
         odom_tf.transform.rotation.x = self.odom_quat[1]
         odom_tf.transform.rotation.y = self.odom_quat[2]
@@ -371,7 +383,7 @@ if __name__ == '__main__':
     node = OdometryNode(
         node_name='odometry',
         context=odom_context,
-        cli_args=['--debug'],
+        cli_args=['--debug', '--publish-tf'],
         namespace='move_base',
         enable_rosout=False
     )
