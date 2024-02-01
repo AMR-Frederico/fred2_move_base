@@ -308,14 +308,14 @@ class JoyInterfaceNode(Node):
         
 
         # Check if the last linear velocity command message was received within the last 2 seconds
-        if (current_time - self.last_linear_vel_command_time).nanoseconds > 2e9:
+        if (current_time - self.last_linear_vel_command_time).nanoseconds > 2e9 and self.manual_mode:
             
             self.get_logger().warn('Velocity angular command reset due to a timeout (no message received within the last 2 seconds).')
             vel_angular = 0.0
 
 
         # Check if the last angular velocity command message was received within the last 2 seconds
-        if (current_time - self.last_angular_vel_command_time).nanoseconds > 2e9:
+        if (current_time - self.last_angular_vel_command_time).nanoseconds > 2e9 and self.manual_mode:
             
             self.get_logger().warn('Velocity linear command reset due to a timeout (no message received within the last 2 seconds).')
             vel_linear = 0.0
@@ -344,6 +344,8 @@ class JoyInterfaceNode(Node):
             missionCompleted_msg = Bool()
             missionCompleted_msg.data = False
             self.missionCompleted_pub.publish(missionCompleted_msg)
+
+            self.get_logger().info('Reset odometry')
         
 
         reset_msg = Bool()
@@ -356,6 +358,9 @@ class JoyInterfaceNode(Node):
 
         #* switch mode (triangle buttom)
         self.change_mode.data = self.switch_mode > self.last_mode
+
+        if self.change_mode.data: 
+            self.get_logger().info('Switch mode')
         
         self.last_mode = self.switch_mode 
 
