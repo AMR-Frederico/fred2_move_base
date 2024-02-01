@@ -3,16 +3,30 @@ import launch_ros.descriptions
 
 from launch import LaunchDescription
 from launch_ros.actions import Node
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration
 
 
 def generate_launch_description():
+    
+    # Declare the launch argument
+    declare_robot_localization_odom = DeclareLaunchArgument(
+        '--use-robot-localization',
+        default_value='true',  
+        description='Use de odometry from robot localization'
+    )
+
     
     safe_twist_node = launch_ros.actions.Node(
 
             package='fred2_move_base',
             executable='safe_twist.py',
             name='safe_twist',
-            namespace='move_base'
+            namespace='move_base', 
+            arguments=[
+                '--use-robot-localization',
+                LaunchConfiguration('--use-robot-localization'),  
+        ],
     )
     
 
@@ -45,6 +59,7 @@ def generate_launch_description():
 
     return LaunchDescription([
 
+        declare_robot_localization_odom,
         safe_twist_node, 
         joy_interface_node, 
         led_manager_node, 
