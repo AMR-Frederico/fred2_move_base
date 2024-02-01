@@ -267,6 +267,8 @@ class OdometryNode(Node):
             self.y_pos = 0.0
             self.heading_offset = self.robot_heading
 
+            self.get_logger().info('Odometry reset')
+
 
         self.current_time = self.get_clock().now()
 
