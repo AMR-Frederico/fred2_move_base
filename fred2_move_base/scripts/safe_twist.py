@@ -291,6 +291,8 @@ class SafeTwistNode(Node):
         
 
         if self.user_abort_command: 
+            
+            self.get_logger().warn('User STOP command -> Stopping the robot')
 
             self.cmd_vel_safe.linear.x = self.robot_vel.linear.x * self.MOTOR_BRAKE_FACTOR
             self.cmd_vel_safe.angular.z = self.robot_vel.angular.z * self.MOTOR_BRAKE_FACTOR
@@ -399,6 +401,7 @@ class SafeTwistNode(Node):
         if self.stop_by_obstacle or self.user_abort_command or not self.joy_connected:
 
             self.robot_safety = False
+            self.get_logger().warn(f'Robot NOT safe -> obstacle: {self.stop_by_obstacle} | stop command: {self.user_abort_command} | joy connected: {self.joy_connected}')
         
         else: 
             
