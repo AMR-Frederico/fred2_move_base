@@ -41,19 +41,29 @@ pip install transforms3d
 
 ## Usage
 
-**Launch the package:**
+### Launch
 
-```bash
-ros2 launch fred2_move_base move_base_launch.yaml
+**Considering `Robot Localization` for odometry and `Robot Descriptor` for publish the TFs:**
+```
+ros2 launch fred2_move_base move_base.launch.py
 ```
 
-**Joystick commands:**
+**Considering `Move Base Odometry` to publish odom and TF:**
+```
+ros2 launch fred2_move_base move_base_with_odom_tf.launch.py
+```
 
-- Use the left analog stick for linear velocity control.
-- Use the right analog stick for angular velocity control.
-- Press the circle button to reset odometry.
-- Press the triangle button to switch between different modes.
-- Press the X button to stop and block/release the robot
+### Joystick commands
+
+- Use the `left analog` stick for *linear velocity contro*l.
+
+- Use the `right analog` stick for *angular velocity control*.
+
+- Press the `circle button` to *reset odometry*.
+
+- Press the `triangle button` to *switch* between different *modes*.
+
+- Press the `X button` to *stop* and block/release the robot
 
 ---
 
@@ -67,25 +77,30 @@ Determinate the LED strip's color basead on the robot state. Responsable for the
 **Namespace:** `move_base`
 
 ### Topics
+
 **Publishers:**
 
-|          Name                |       Type      | 
-|:-----------------------------|:--------------- |
-|  `/cmd/led_strip/color`      | `std_msgs/Int16`| 
-| `/cmd/led_strip/debug/color` | `std_msgs/Int16`|
+- `/cmd/led_strip/color`(*std_msgs/Int16*): Colors that indicates the main state of the robot
+
+- `/cmd/led_strip/debug/color` (*std_msgs/Int16*): Color for debug the robot status, like joy connectivity or alert of colision detection. 
 
 <br>
  
 **Subscribers:**
-|             Name                 |             Type            |
-| :--------------------------------| :-------------------------  |
-|`safety/abort/colision_detection` |       `std_msgs/Bool`       |
-|   `safety/abort/user_command`    |       `std_msgs/Bool`       |
-|   `safety/ultrasonic/disabled`   |       `std_msgs/Bool`       |
-|    `joy/controller/connected`    |       `std_msgs/Bool`       |
-|  `machine_states/robot_status`   |      `std_msgs/Int16`       |
-|    `goal_manager/goal/current`   | `geometry_msgs/PoseStamped` |
-|           `/odom/reset`          |       `std_msgs/Bool`       |
+
+- `safety/abort/colision_detection` (*std_msgs/Bool*): Returns `True` if a obstacle is detected, otherwise is `False`
+
+- `safety/abort/user_command` (*std_msgs/Bool*): Returns `True` if the user pressed `X`, stopping the robot, and `False` if the user press `X` again to release the robot
+
+- `safety/ultrasonic/disabled` (*std_msgs/Bool*): Publish `True` if the ultrasonics were desabled, otherwise is `False`
+
+- `joy/controller/connected` (*std_msgs/Bool*): Joy status connectivity. 
+
+- `machine_states/robot_state` (*std_msgs/Int16*): Robot state from the main machine states
+
+- `goal_manager/goal/current` (*geometry_msgs/PoseStamped*): Robot current goal
+
+- `/odom/reset` (*std_msgs/Bool*): Reset odometry and tobot state
 
  <br>
 
@@ -134,26 +149,26 @@ The node is responsible for managing the velocity commands of a robot based on s
 ### Topics
 **Publishers:**
 
-|               Name                |          Type        | 
-|:-----------------------           |:---------------------|
-|         `/cmd_vel/safe`           | `geometry_msgs/Twist`| 
-|    `safety/abort/user_command`    |   `std_msgs/Bool`    |
-|   `safety/abort/colision_alert`   |   `std_msgs/Bool`    |
-|    `safety/ultrasonic/disabled`   |   `std_msgs/Bool`    |
-|           `robot_safety`          |   `std_msgs/Bool`    |
+- `/cmd_vel/safe` (*geometry_msgs/Twist*): Safe velocity command for the robot
+
+- `safety/abort/user_command` (*std_msgs/Bool*): Topic for debug, to inform a user request command to stop the robot
+- `safety/abort/colision_alert` (*std_msgs/Bool*): Topic for debug, to inform when there is a collision alert 
+- `safety/ultrasonic/disabled` (*std_msgs/Bool*): Topic for debug, to inform when the ultrsonics are disable 
+- `robot_safety` (*std_msgs/Bool*): Robot safety status, returns `True` when the robot is safe, and `False` when the robot is blocked by `safe twist node`
 
 <br>
 
 **Subscribers:**
-|             Name                 |             Type            |
-| :--------------------------------| :-------------------------  |
-| `/sensor/range/ultrasonic/right` |     `std_msgs/Float32`      |
-| `/sensor/range/ultrasonic/left`  |     `std_msgs/Float32`      |
-| `/sensor/range/ultrasonic/back`  |     `std_msgs/Float32`      |
-|      `/odometry/filtered`        |     `nav_msgs/Odometry`     |
-|             `/odom`              |     `nav_msgs/Odometry`     |
-|            `/cmd_vel`            |    `geometry_msgs/Twist`    |
-|   `/joy/controler/ps4/break`     |       `std_msgs/Bool`       |
+
+- `/sensor/range/ultrasonic/right` (*std_msgs/Float32*): Ultrasonic right data 
+
+- `/sensor/range/ultrasonic/left` (*std_msgs/Float32`*): Ultrasonic left data
+- `/sensor/range/ultrasonic/back` (*std_msgs/Float32*): Ultrsonic back data 
+- `/odometry/filtered` (*nav_msgs/Odometry*): Odometry from `Robot Localization `
+- `/odom` (*nav_msgs/Odometry*): Odometry from `Move Base`
+- `/cmd_vel` (*geometry_msgs/Twist*): Velocity commands from other nodes 
+- `/joy/controler/ps4/break` (*std_msgs/Bool*): User stop command by the joystick 
+
 
  <br>
 
@@ -197,26 +212,28 @@ The Joy Interface is a node that interfaces with a joystick (e.g., PS4 controlle
 
 ### Topics
 **Publishers:**
+- `/cmd_vel` (*geometry_msgs/Twist*): Velocity command 
 
-|               Name                     |          Type         | 
-|:-----------------------                |:--------------------- |
-|`/cmd_vel`                              |  `geometry_msgs/Twist |
-|`/odom/reset`                           |  `std_msgs/Bool`      |
-|`/joy/machine_states/switch_mode`       |  `std_msgs/Bool`      |
-| `/goal_manager/goal/mission_completed` |  `std_msgs/Bool`      |
+- `/odom/reset` (*std_msgs/Bool*): Command for reset the odometry and reset the robot state
+
+- `/joy/machine_states/switch_mode` (*std_msgs/Bool*): Switch between `MANUAL` and `AUTONOMOUS` mode.
+
+- `/goal_manager/goal/mission_completed` (*std_msgs/Bool*): Publish false when received a command for reset the odometry
 
 
 
 <br>
 
 **Subscribers:**
-|             Name                       |             Type            |
-| :--------------------------------------| :-------------------------  |
-|`/joy/controler/ps4/cmd_vel/linear`     |      `std_msgs/Int16`       |    
-|`/joy/controler/ps4/cmd_vel/angular`    |      `std_msgs/Int16`       |
-|`/joy/controler/ps4/circle`             |      `std_msgs/Int16`       |
-|`/joy/controler/ps4/triangle`           |      `std_msgs/Int16`       |
-|`/machine_state/robot_state`            |      `std_msgs/Bool`        |
+- `/joy/controler/ps4/cmd_vel/linear` (*std_msgs/Int16*): Linear velocity from the analog joy control
+
+- `/joy/controler/ps4/cmd_vel/angular` (*std_msgs/Int16*): Angular velocity from the analog joy control
+
+- `/joy/controler/ps4/circle` (*std_msgs/Int16*): Get the circle button command 
+
+- `/joy/controler/ps4/triangle` (*std_msgs/Int16*): Get the triangle button command 
+
+- `/machine_state/robot_state` (*std_msgs/Bool*): Get the robot state
 
 
 
@@ -226,6 +243,7 @@ The Joy Interface is a node that interfaces with a joystick (e.g., PS4 controlle
 ### Pararams
 
 - `MAX_SPEED_JOY_LINEAR`: Maximum linear speed of the robot.
+
 - `MAX_SPEED_JOY_ANGULAR`: Maximum angular speed of the robot.
 - `MAX_VALUE_CONTROLLERr`: Maximum value of analog joystick input.
 - `DRIFT_ANALOG_TOLERANCE`: Minimum threshold for joystick input to be considered.
@@ -254,21 +272,17 @@ The Odometry Node is responsible for calculating and publishing odometry informa
 **Namespace:** `move_base`
 
 ### Topics
-**Publishers:**
+**Publishers:** 
 
-|               Name                 |          Type        | 
-|:-----------------------            |:---------------------|
-|`/power/status/distance/ticks/right` |   `std_msgs/Int32`   | 
-|`/power/status/distance/ticks/left` |   `std_msgs/Int32`   |
-|       `/sensor/orientation/imu`    |   `sensor_msgs/Imu`  |
-|             `/odom/reset`          |   `std_msgs/Bool`    |
+- `/power/status/distance/ticks/right` (*std_msgs/Int32*): Ticks data from the right encoders
+- `/power/status/distance/ticks/left` (*std_msgs/Int32*): Ticks data from left encoders 
+- `/sensor/orientation/imu` (*sensor_msgs/Imu*): Imu raw data
+- `/odom/reset` (*std_msgs/Bool*): Command for reset the odometry
 
 <br>
 
 **Subscribers:**
-|             Name                 |             Type            |
-| :--------------------------------| :-------------------------  |
-|             `/odom`              |     `nav_msgs/Odometry`     |
+- `/odom` (*nav_msgs/Odometry*): Odometry (without kalman filter)
 
  <br>
 
@@ -297,14 +311,3 @@ ros2 run fred2_move_base ticks2odom.py --publish-tf
 ```
 ---- 
 
-## Launch
-
-**Considering `Robot Localization` for odometry and `Robot Descriptor` for publish the TFs:**
-```
-ros2 launch fred2_move_base move_base.launch.py
-```
-
-**Considering `Move Base Odometry` to publish odom and TF:**
-```
-ros2 launch fred2_move_base move_base_with_odom_tf.launch.py
-```
