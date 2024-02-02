@@ -13,7 +13,7 @@ from rclpy.node import Node
 from rclpy.context import Context 
 from rclpy.parameter import Parameter
 from rclpy.executors import SingleThreadedExecutor
-from rclpy.qos import QoSPresetProfiles, QoSProfile, QoSHistoryPolicy, QoSLivelinessPolicy, QoSReliabilityPolicy
+from rclpy.qos import QoSPresetProfiles, QoSProfile, QoSHistoryPolicy, QoSLivelinessPolicy, QoSReliabilityPolicy, QoSDurabilityPolicy
 from rcl_interfaces.msg import SetParametersResult
 
 from tf2_ros import TransformBroadcaster
@@ -82,16 +82,11 @@ class OdometryNode(Node):
         # quality protocol -> the node must not lose any message 
         qos_profile = QoSProfile(
             reliability=QoSReliabilityPolicy.RELIABLE, 
+            durability= QoSDurabilityPolicy.TRANSIENT_LOCAL,
             history=QoSHistoryPolicy.KEEP_LAST, 
-            depth=1
-        )
-
-
-        # quality protocol -> the node must not lose any message 
-        imu_qos_profile = QoSProfile(
-            reliability=QoSReliabilityPolicy.RELIABLE, 
-            history=QoSHistoryPolicy.KEEP_LAST, 
-            depth=5
+            depth=10, 
+            liveliness=QoSLivelinessPolicy.AUTOMATIC
+            
         )
 
         self.create_subscription(Int32, 
@@ -107,7 +102,7 @@ class OdometryNode(Node):
         self.create_subscription(Imu, 
                                  '/sensor/orientation/imu', 
                                  self.heading_callback, 
-                                 imu_qos_profile)
+                                 qos_profile)
         
         self.create_subscription(Bool, 
                                  '/odom/reset', 

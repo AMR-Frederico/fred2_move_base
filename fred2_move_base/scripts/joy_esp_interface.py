@@ -11,7 +11,7 @@ from typing import List, Optional
 from rclpy.node import Node
 from rclpy.context import Context 
 from rclpy.parameter import Parameter
-from rclpy.qos import QoSPresetProfiles, QoSProfile, QoSHistoryPolicy, QoSLivelinessPolicy, QoSReliabilityPolicy
+from rclpy.qos import QoSPresetProfiles, QoSProfile, QoSHistoryPolicy, QoSLivelinessPolicy, QoSReliabilityPolicy, QoSDurabilityPolicy
 
 from rcl_interfaces.msg import SetParametersResult
 from rcl_interfaces.srv import GetParameters
@@ -86,8 +86,11 @@ class JoyInterfaceNode(Node):
         # quality protocol -> the node must not lose any message 
         qos_profile = QoSProfile(
             reliability=QoSReliabilityPolicy.RELIABLE, 
+            durability= QoSDurabilityPolicy.TRANSIENT_LOCAL,
             history=QoSHistoryPolicy.KEEP_LAST, 
-            depth=1
+            depth=10, 
+            liveliness=QoSLivelinessPolicy.AUTOMATIC
+            
         )
 
         self.create_subscription(Int16, 
@@ -116,15 +119,15 @@ class JoyInterfaceNode(Node):
                                  qos_profile)
         
 
-        self.vel_pub = self.create_publisher(Twist, '/cmd_vel', 1)      
+        self.vel_pub = self.create_publisher(Twist, '/cmd_vel', 5)      
 
-        self.resetOdom_pub = self.create_publisher(Bool, '/odom/reset', 1)
+        self.resetOdom_pub = self.create_publisher(Bool, '/odom/reset', qos_profile)
 
-        self.goalsReset_pub = self.create_publisher(Bool, '/goal_manager/goal/reset', 1)
+        self.goalsReset_pub = self.create_publisher(Bool, '/goal_manager/goal/reset', qos_profile)
 
-        self.switchMode_pub = self.create_publisher(Bool, '/joy/machine_states/switch_mode', 1) 
+        self.switchMode_pub = self.create_publisher(Bool, '/joy/machine_states/switch_mode', qos_profile) 
 
-        self.missionCompleted_pub = self.create_publisher(Bool, '/goal_manager/goal/mission_completed', 1)
+        self.missionCompleted_pub = self.create_publisher(Bool, '/goal_manager/goal/mission_completed', 5)
 
 
         # load params from the config file 

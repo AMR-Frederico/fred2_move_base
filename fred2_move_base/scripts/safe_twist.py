@@ -7,7 +7,7 @@ import yaml
 
 from typing import List, Optional
 
-from rclpy.qos import QoSPresetProfiles, QoSProfile, QoSHistoryPolicy, QoSLivelinessPolicy, QoSReliabilityPolicy
+from rclpy.qos import QoSPresetProfiles, QoSProfile, QoSHistoryPolicy, QoSLivelinessPolicy, QoSReliabilityPolicy, QoSDurabilityPolicy
 from rclpy.executors import SingleThreadedExecutor, MultiThreadedExecutor
 from rclpy.parameter import Parameter
 from rclpy.context import Context 
@@ -83,12 +83,18 @@ class SafeTwistNode(Node):
                          start_parameter_services=start_parameter_services, 
                          parameter_overrides=parameter_overrides)
         
+
+
         # quality protocol -> the node must not lose any message 
         qos_profile = QoSProfile(
             reliability=QoSReliabilityPolicy.RELIABLE, 
+            durability= QoSDurabilityPolicy.TRANSIENT_LOCAL,
             history=QoSHistoryPolicy.KEEP_LAST, 
-            depth=1
+            depth=10, 
+            liveliness=QoSLivelinessPolicy.AUTOMATIC
+            
         )
+
 
         self.create_subscription(Float32, 
                                  '/sensor/range/ultrasonic/right', 
@@ -123,7 +129,7 @@ class SafeTwistNode(Node):
         self.create_subscription(Bool,
                                  '/joy/controller/connected',
                                  self.joyConnected_callback,
-                                 1)
+                                 qos_profile)
 
 
         if use_robot_localization: 
@@ -154,17 +160,17 @@ class SafeTwistNode(Node):
 
         self.userStop_pub = self.create_publisher(Bool, 
                                                   '/safety/abort/user_command', 
-                                                  qos_profile)
+                                                  5)
         
 
         self.collisionDetection_pub = self.create_publisher(Bool, 
                                                       '/safety/abort/collision_alert', 
-                                                      qos_profile)
+                                                      5)
         
 
         self.ultrasonicDisabled_pub = self.create_publisher(Bool, 
                                                             '/safety/ultrasonic/disabled', 
-                                                            qos_profile)
+                                                            5)
 
 
         self.robotSafety_pub = self.create_publisher(Bool, 
@@ -174,7 +180,7 @@ class SafeTwistNode(Node):
 
         self.joyConnect_pub = self.create_publisher(Bool, 
                                                     '/joy/controller/connected', 
-                                                    1)
+                                                    5)
 
 
         # get params from the config file

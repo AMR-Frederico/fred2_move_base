@@ -11,6 +11,7 @@ from typing import Any, List, Optional
 from rclpy.parameter import Parameter
 from rclpy.node import Node
 from rclpy.time import Duration, Time
+from rclpy.qos import QoSPresetProfiles, QoSProfile, QoSHistoryPolicy, QoSLivelinessPolicy, QoSReliabilityPolicy, QoSDurabilityPolicy
 
 from rcl_interfaces.msg import Parameter, SetParametersResult
 from rcl_interfaces.srv import GetParameters
@@ -88,11 +89,24 @@ class led_manager(Node):
                          start_parameter_services=start_parameter_services, 
                          parameter_overrides=parameter_overrides)
 
+
         # Load parameters from YAML file
         self.load_params(led_path, led_group)
         self.get_colors()
         
+
         self.start_time = self.get_clock().now()
+
+
+        # quality protocol -> the node must not lose any message 
+        qos_profile = QoSProfile(
+            reliability=QoSReliabilityPolicy.RELIABLE, 
+            durability= QoSDurabilityPolicy.TRANSIENT_LOCAL,
+            history=QoSHistoryPolicy.KEEP_LAST, 
+            depth=10, 
+            liveliness=QoSLivelinessPolicy.AUTOMATIC
+            
+        )
 
 
         self.create_subscription(Bool,
@@ -122,13 +136,13 @@ class led_manager(Node):
         self.create_subscription(Int16,
                                  '/machine_states/robot_state',
                                  self.robot_state_callback, 
-                                 5 )
+                                 qos_profile )
         
 
         self.create_subscription(PoseStamped,
                                  '/goal_manager/goal/current',
                                  self.goal_current_callback, 
-                                 5 )
+                                 qos_profile )
         
 
         # self.create_subscription(Bool, 
@@ -144,7 +158,7 @@ class led_manager(Node):
 
         self.ledColor_pub = self.create_publisher(Int16, 
                                                     '/cmd/led_strip/color', 
-                                                    5 )
+                                                    qos_profile )
         
 
 
