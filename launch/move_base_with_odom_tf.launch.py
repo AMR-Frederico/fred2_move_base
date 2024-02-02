@@ -2,7 +2,7 @@ import launch_ros
 
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, TimerAction, LogInfo
 from launch.substitutions import LaunchConfiguration
 
 
@@ -53,9 +53,30 @@ def generate_launch_description():
     
 
     return LaunchDescription([
+
         declare_publish_tf_arg,
-        safe_twist_node,
-        joy_interface_node,
-        led_manager_node,
-        odom_node
+
+        TimerAction(period= 5.0, actions= [
+            
+            LogInfo(msg=' ######################### LAUNCHING SAFE TWIST #################################### '), 
+            safe_twist_node
+        ]), 
+
+        TimerAction(period= 3.0, actions=[
+
+            LogInfo(msg=' ######################### LAUNCHING JOY ESP INTERFACE #################################### '), 
+            joy_interface_node
+        ]), 
+
+        TimerAction(period= 3.0, actions= [ 
+
+            LogInfo(msg=' ######################### LAUNCHING LED MANAGER #################################### '), 
+            odom_node
+        ]), 
+
+        TimerAction(period= 3.0, actions= [
+
+            LogInfo(msg=' ######################### LAUNCHING ODOMETRY #################################### '), 
+            led_manager_node
+        ])
     ])
