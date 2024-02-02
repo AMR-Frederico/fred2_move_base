@@ -123,8 +123,6 @@ class JoyInterfaceNode(Node):
 
         self.resetOdom_pub = self.create_publisher(Bool, '/odom/reset', qos_profile)
 
-        self.goalsReset_pub = self.create_publisher(Bool, '/goal_manager/goal/reset', qos_profile)
-
         self.switchMode_pub = self.create_publisher(Bool, '/joy/machine_states/switch_mode', qos_profile) 
 
         self.missionCompleted_pub = self.create_publisher(Bool, '/goal_manager/goal/mission_completed', 5)
@@ -356,7 +354,6 @@ class JoyInterfaceNode(Node):
 
 
         self.resetOdom_pub.publish(reset_msg)
-        self.goalsReset_pub.publish(reset_msg)
 
 
         #* switch mode (triangle buttom)
