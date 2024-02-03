@@ -88,7 +88,7 @@ class SafeTwistNode(Node):
         # quality protocol -> the node must not lose any message 
         qos_profile = QoSProfile(
             reliability=QoSReliabilityPolicy.RELIABLE, 
-            durability= QoSDurabilityPolicy.TRANSIENT_LOCAL,
+            durability= QoSDurabilityPolicy.VOLATILE,
             history=QoSHistoryPolicy.KEEP_LAST, 
             depth=10, 
             liveliness=QoSLivelinessPolicy.AUTOMATIC
@@ -160,17 +160,17 @@ class SafeTwistNode(Node):
 
         self.userStop_pub = self.create_publisher(Bool, 
                                                   '/safety/abort/user_command', 
-                                                  5)
+                                                  qos_profile)
         
 
         self.collisionDetection_pub = self.create_publisher(Bool, 
                                                       '/safety/abort/collision_alert', 
-                                                      5)
+                                                      qos_profile)
         
 
         self.ultrasonicDisabled_pub = self.create_publisher(Bool, 
                                                             '/safety/ultrasonic/disabled', 
-                                                            5)
+                                                            qos_profile)
 
 
         self.robotSafety_pub = self.create_publisher(Bool, 

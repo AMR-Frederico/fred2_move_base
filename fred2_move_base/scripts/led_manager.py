@@ -101,7 +101,7 @@ class led_manager(Node):
         # quality protocol -> the node must not lose any message 
         qos_profile = QoSProfile(
             reliability=QoSReliabilityPolicy.RELIABLE, 
-            durability= QoSDurabilityPolicy.TRANSIENT_LOCAL,
+            durability= QoSDurabilityPolicy.VOLATILE,
             history=QoSHistoryPolicy.KEEP_LAST, 
             depth=10, 
             liveliness=QoSLivelinessPolicy.AUTOMATIC
@@ -112,25 +112,25 @@ class led_manager(Node):
         self.create_subscription(Bool,
                                  '/safety/abort/collision_alert', 
                                  self.collision_callback,
-                                 5 )
+                                 qos_profile )
 
 
         self.create_subscription(Bool, 
                                  '/safety/abort/user_command',
                                  self.manual_abort_callback,
-                                 5 )
+                                 qos_profile )
         
 
         self.create_subscription(Bool, 
                                  '/safety/ultrasonic/disabled', 
                                  self.ultrasonicStatus_callback, 
-                                 5 )
+                                 qos_profile )
         
         
         self.create_subscription(Bool, 
                                  '/joy/controller/connected', 
                                  self.joyConnected_callback, 
-                                 5 )
+                                 qos_profile )
 
         
         self.create_subscription(Int16,
@@ -153,7 +153,7 @@ class led_manager(Node):
         self.create_subscription(Bool, 
                                  '/odom/reset', 
                                  self.odom_reset_callback, 
-                                 5)
+                                 qos_profile)
         
 
         self.ledColor_pub = self.create_publisher(Int16, 
@@ -165,7 +165,7 @@ class led_manager(Node):
 
         self.ledDebug_pub = self.create_publisher(Int16, 
                                                    '/cmd/led_strip/debug/color', 
-                                                   5 )
+                                                   qos_profile )
         
 
         

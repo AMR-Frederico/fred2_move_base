@@ -86,7 +86,7 @@ class JoyInterfaceNode(Node):
         # quality protocol -> the node must not lose any message 
         qos_profile = QoSProfile(
             reliability=QoSReliabilityPolicy.RELIABLE, 
-            durability= QoSDurabilityPolicy.TRANSIENT_LOCAL,
+            durability= QoSDurabilityPolicy.VOLATILE,
             history=QoSHistoryPolicy.KEEP_LAST, 
             depth=10, 
             liveliness=QoSLivelinessPolicy.AUTOMATIC
@@ -119,13 +119,13 @@ class JoyInterfaceNode(Node):
                                  qos_profile)
         
 
-        self.vel_pub = self.create_publisher(Twist, '/cmd_vel', 5)      
+        self.vel_pub = self.create_publisher(Twist, '/cmd_vel', qos_profile)      
 
         self.resetOdom_pub = self.create_publisher(Bool, '/odom/reset', qos_profile)
 
         self.switchMode_pub = self.create_publisher(Bool, '/joy/machine_states/switch_mode', qos_profile) 
 
-        self.missionCompleted_pub = self.create_publisher(Bool, '/goal_manager/goal/mission_completed', 5)
+        self.missionCompleted_pub = self.create_publisher(Bool, '/goal_manager/goal/mission_completed', qos_profile)
 
 
         # load params from the config file 
