@@ -15,6 +15,7 @@ from rclpy.node import Node
 from rcl_interfaces.msg import SetParametersResult
 
 from std_msgs.msg import Bool, Float32, Int16
+from sensor_msgs.msg import Joy
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 
@@ -51,6 +52,7 @@ class SafeTwistNode(Node):
     vel_timeout = False
 
     joy_connected = False
+    joy_battery = 0
     
     robot_safety = False
     robotSafety_msg = Bool()
@@ -120,16 +122,22 @@ class SafeTwistNode(Node):
                                  qos_profile)
         
 
-        self.create_subscription(Int16, 
-                                 '/joy/controller/ps4/brake', 
+        self.create_subscription(Joy, 
+                                 '/joy/controller/ps4', 
                                  self.abort_callback, 
-                                 qos_profile)
+                                 10)
 
 
         self.create_subscription(Bool,
                                  '/joy/controller/connected',
                                  self.joyConnected_callback,
-                                 qos_profile)
+                                 10)
+        
+
+        self.create_subscription(Int16, 
+                                 '/joy/controller/ps4/battery', 
+                                 self.joyBattery_callback, 
+                                 10)
 
 
         if use_robot_localization: 
@@ -261,6 +269,11 @@ class SafeTwistNode(Node):
         self.last_joy_connected = self.get_clock().now()
 
 
+    def joyBattery_callback(self, battery): 
+
+        self.joy_battery = battery.data
+
+
 
     def rightUltrasonic_callback(self, distance): 
         
@@ -303,11 +316,14 @@ class SafeTwistNode(Node):
     # when received a emergency brake command, forces the robot to stop and keep it still until the button is released
     def abort_callback(self, user_command): 
 
-        self.abort_flag = user_command.data 
+
+        self.abort_flag = user_command.buttons[0] 
+
 
         if (self.abort_flag > self.abort_previous_flag): 
 
             self.user_abort_command = not self.user_abort_command
+
 
 
         self.abort_previous_flag = self.abort_flag
@@ -431,6 +447,13 @@ class SafeTwistNode(Node):
             self.robot_safety = True
 
 
+        if self.joy_battery < 30: 
+
+            self.get_logger().warn(f'!!!!!!!!!!!!!! JOYSTICK WITH LOW BATTERY: {self.joy_battery} !!!!!!!!!!!!!!!!!!!!!!!')
+
+        else: 
+
+            self.get_logger().warn(f'Joy battery: {self.joy_battery}')
 
 
         self.robotSafety_msg.data = self.robot_safety
