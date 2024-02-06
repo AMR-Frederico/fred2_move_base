@@ -89,20 +89,30 @@ class OdometryNode(Node):
             
         )
 
+        # quality protocol -> the node must not lose any message 
+        qos_imu_profile = QoSProfile(
+            reliability=QoSReliabilityPolicy.BEST_EFFORT, 
+            durability= QoSDurabilityPolicy.VOLATILE,
+            history=QoSHistoryPolicy.KEEP_LAST, 
+            depth=10, 
+            liveliness=QoSLivelinessPolicy.AUTOMATIC
+            
+        )
+
         self.create_subscription(Int32, 
                                  '/power/status/distance/ticks/left', 
                                  self.ticksLeft_callback,
-                                 qos_profile)
+                                 10)
 
         self.create_subscription(Int32, 
                                  '/power/status/distance/ticks/right', 
                                  self.ticksRight_callback, 
-                                 qos_profile)
+                                 10)
         
         self.create_subscription(Imu, 
                                  '/sensor/orientation/imu', 
                                  self.heading_callback, 
-                                 qos_profile)
+                                 qos_imu_profile)
         
         self.create_subscription(Bool, 
                                  '/odom/reset', 
@@ -393,7 +403,7 @@ if __name__ == '__main__':
     thread = threading.Thread(target=rclpy.spin, args=(node,), daemon=True)
     thread.start()
 
-    rate = node.create_rate(1)
+    rate = node.create_rate(10)
 
     try: 
         while rclpy.ok(): 
