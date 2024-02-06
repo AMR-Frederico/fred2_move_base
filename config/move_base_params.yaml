@@ -44,8 +44,8 @@ safe_twist:
 
 joy_esp_interface: 
 
-  max_speed_joy_linear: 5 
-  max_speed_joy_angular: 10 
+  max_vel_joy_linear: 5 
+  max_vel_joy_angular: 10 
   
   max_value_controller: 127 
   
