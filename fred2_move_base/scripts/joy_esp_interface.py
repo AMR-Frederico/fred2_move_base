@@ -214,8 +214,27 @@ class JoyInterfaceNode(Node):
     def joy_callback(self, joy_msg): 
 
         # analog 
-        self.joy_vel_linear = joy_msg.axes[0]
-        self.joy_vel_angular = joy_msg.axes[2]
+
+        if abs(joy_msg.axes[0]) > self.DRIFT_ANALOG_TOLERANCE: 
+
+            self.joy_vel_linear = joy_msg.axes[0]
+
+        else: 
+
+            self.joy_vel_linear = 0
+
+
+
+        # analog 
+
+        if abs(joy_msg.axes[2]) > self.DRIFT_ANALOG_TOLERANCE: 
+
+            self.joy_vel_angular = joy_msg.axes[2]
+
+        else: 
+
+            self.joy_vel_angular = 0 
+
 
 
         # buttons 
@@ -223,31 +242,61 @@ class JoyInterfaceNode(Node):
         switch_button = joy_msg.buttons[2]
     
 
+
         if reset_button > self.last_reset: 
 
-            self.reset_odom = True 
+            self.get_logger().info('Reset odometry')
+            self.reset_robot_odom(True)
 
         else: 
 
-            self.reset_odom = False 
+            self.reset_robot_odom(False)
+      
+        
 
-        
-        
 
         if switch_button > self.last_switch: 
+            
+            self.get_logger().info('Switch mode')
+            self.switch_robot_mode(True)
 
-            self.switch_mode = True
-        
         else: 
 
-            self.switch_mode = False
+            self.switch_robot_mode(False)
+
 
         
         self.last_joy_command_time = self.get_clock().now()
+        
+        self.last_switch = switch_button
+        self.last_reset = reset_button
 
 
 
 
+    def switch_robot_mode(self, status): 
+
+        
+        change_mode = Bool()
+        change_mode.data = status        
+        self.switchMode_pub.publish(change_mode)
+
+
+
+    def reset_robot_odom(self, status): 
+
+        
+        missionCompleted_msg = Bool()
+        missionCompleted_msg.data = False
+        self.missionCompleted_pub.publish(missionCompleted_msg)
+
+        # reset the state of the main machine states, for the initial one 
+        reset_msg = Bool()
+        reset_msg.data = status
+        print(status)
+        self.resetOdom_pub.publish(reset_msg)
+
+    
 
     def manualMode_callback(self, msg):
 
@@ -288,31 +337,6 @@ class JoyInterfaceNode(Node):
             self.vel_pub.publish(self.cmd_vel)
 
 
-        # reset the state of the main machine states, for the initial one 
-        reset_msg = Bool()
-        reset_msg.data = self.reset_odom
-        self.resetOdom_pub.publish(reset_msg)
-
-
-        if self.reset_odom: 
-
-            missionCompleted_msg = Bool()
-            missionCompleted_msg.data = False
-            self.missionCompleted_pub.publish(missionCompleted_msg)
-
-            self.get_logger().info('Reset odometry')
-        
-
-        change_mode = Bool()
-        change_mode.data = self.switch_mode        
-        self.switchMode_pub.publish(change_mode)
-
-
-        if self.switch_mode: 
-            
-            self.get_logger().info('Switch mode')
-        
-
 
         
         if debug_mode: 
@@ -336,7 +360,7 @@ if __name__ == '__main__':
     thread = threading.Thread(target=rclpy.spin, args=(node,), daemon=True)
     thread.start()
 
-    rate = node.create_rate(10)
+    rate = node.create_rate(1)
 
     try: 
         while rclpy.ok(): 
