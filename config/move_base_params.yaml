@@ -6,16 +6,16 @@
 led_manager:
 
   white: 0          #ffffff
-  blue: 5           #0000ff
-  yellow: 1         #ffff00
+  blue: 1           #0000ff
+  yellow: 5         #ffff00
   pink: 4           #ff0084
   green: 3          #00ff00
   orange: 6         #ffa500
   red: 2            #ff0000
-  black: -1         #000000
-  cyan: 7           #00A8FF
-  purple: 8         #800080 
-  light_green: 9    #00fa9a
+  black: 200        #000000
+  cyan: 200            #00A8FF
+  purple: 7         #800080 
+  light_green: 100      #00fa9a
 
   waypoint_goal: 0  # Goals points that the robot must signal
   ghost_goal: 1 
