@@ -274,6 +274,8 @@ class OdometryNode(Node):
 
             self.get_logger().info('Odometry reset')
 
+            self.reset_odom = False
+
 
         self.current_time = self.get_clock().now()
 
@@ -306,7 +308,7 @@ class OdometryNode(Node):
 
 
         if debug_mode: 
-            node.get_logger().info(f'Position -> x: {self.x_pos} | y: {self.y_pos}')
+            node.get_logger().info(f'Position -> x: {self.x_pos} | y: {self.y_pos} | theta: {self.theta}')
             node.get_logger().info(f'Velocity -> x: {self.linear_vel_x} | y: {self.linear_vel_y} | theta: {self.angular_vel_theta}')
             node.get_logger().info(f'Ticks -> left: {self.left_wheels_ticks} | right: {self.right_wheels_ticks} \n')
 
