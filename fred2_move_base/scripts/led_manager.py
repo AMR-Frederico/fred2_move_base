@@ -173,11 +173,6 @@ class led_manager(Node):
                                  qos_profile)
 
 
-        self.create_subscription(Bool, 
-                                 self.mission_completed_callback, 
-                                 qos_profile)
-
-
 
         self.ledColor_pub = self.create_publisher(Int16, 
                                                     '/cmd/led_strip/color', 
@@ -340,10 +335,6 @@ class led_manager(Node):
             self.get_logger().info(f'{param_name_lower}: {param_value}')
 
 
-    def mission_completed_callback(self, msg): 
-
-        mission_completed = msg.data
-
 
     # Imminent collision detected by the ultrasonic sensors 
     def collision_callback(self, msg):
@@ -376,34 +367,6 @@ class led_manager(Node):
     def robot_state_callback(self, msg): 
         
         self.robot_state = msg.data
-
-        if self.robot_state == self.ROBOT_IN_GOAL: 
-         
-            self.get_logger().info('CHEGUEI NO GOAL')
-            
-            self.led_goal_reached = True
-            
-            self.start_time = self.get_clock().now()
-
-
-        # For keeping the signal on for a determined time
-        if (self.get_clock().now() - self.start_time) > self.LED_ON_TIME: 
-            
-            self.led_goal_reached = False 
-        
-
-        if self.last_goal_pose.theta == self.WAYPOINT_GOAL: 
-        
-            self.led_goal_signal = True
-            self.get_logger().info('TEM QUE LIGAR O LED')
-
-
-        if self.last_goal_pose.theta == self.GHOST_GOAL: 
-            
-            self.led_goal_signal = False
-            self.get_logger().warn('GHOST goal')
-
-
 
 
 
@@ -440,11 +403,34 @@ class led_manager(Node):
         
  
     def led_manager(self):
-        
-        
 
         # Evaluate the sinalization for the goal reached 
 
+        if self.robot_state == self.ROBOT_IN_GOAL: 
+         
+            self.get_logger().info('CHEGUEI NO GOAL')
+            
+            self.led_goal_reached = True
+            
+            self.start_time = self.get_clock().now()
+
+
+        # For keeping the signal on for a determined time
+        if (self.get_clock().now() - self.start_time) > self.LED_ON_TIME: 
+            
+            self.led_goal_reached = False 
+        
+
+        if self.last_goal_pose.theta == self.WAYPOINT_GOAL: 
+        
+            self.led_goal_signal = True
+            self.get_logger().info('TEM QUE LIGAR O LED')
+
+
+        if self.last_goal_pose.theta == self.GHOST_GOAL: 
+            
+            self.led_goal_signal = False
+            self.get_logger().warn('GHOST goal')
 
                 
 
@@ -472,7 +458,7 @@ class led_manager(Node):
 
             if self.robot_state == self.ROBOT_MISSION_COMPLETED:
 
-                self.led_color.data = self.CYAN
+                self.led_color.data = self.YELLOW
 
 
 
