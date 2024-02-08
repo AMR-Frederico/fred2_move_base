@@ -98,19 +98,19 @@ class SafeTwistNode(Node):
         )
 
 
-        self.create_subscription(Float32, 
+        self.create_subscription(Int16, 
                                  '/sensor/range/ultrasonic/right', 
                                  self.rightUltrasonic_callback, 
                                  qos_profile)
         
 
-        self.create_subscription(Float32, 
+        self.create_subscription(Int16, 
                                  '/sensor/range/ultrasonic/left', 
                                  self.leftUltrasonic_callback, 
                                  qos_profile)
         
 
-        self.create_subscription(Float32, 
+        self.create_subscription(Int16, 
                                  '/sensor/range/ultrasonic/back', 
                                  self.backUltrasonic_callback, 
                                  qos_profile)
@@ -453,7 +453,7 @@ class SafeTwistNode(Node):
 
         else: 
 
-            self.get_logger().warn(f'Joy battery: {self.joy_battery}')
+            self.get_logger().warn(f'Joy battery: {self.joy_battery}%')
 
 
         self.robotSafety_msg.data = self.robot_safety
