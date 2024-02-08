@@ -40,22 +40,39 @@ class led_manager(Node):
     
     robot_state = -5    # Robot state, random initial value
 
-    last_goal_reached = False
 
     user_stop_command = True
     collision_detected = False
     joy_connected = False
 
+
     ultrasonic_disabled = False
 
+
     goal_pose = Pose2D()
+
+    goal_pose.x = 0.0 
+    goal_pose.y = 0.0
+    goal_pose.theta = 0.0
+
+
+    last_goal_pose = Pose2D()
+
+    last_goal_pose.x = 0.0 
+    last_goal_pose.y = 0.0
+    last_goal_pose.theta = 0.0
+
+
 
     led_goal_reached = False
     led_goal_signal = False
 
+
     last_robot_emergency = False
 
+
     odom_reset = False
+
 
 
 
@@ -154,7 +171,13 @@ class led_manager(Node):
                                  '/odom/reset', 
                                  self.odom_reset_callback, 
                                  qos_profile)
-        
+
+
+        self.create_subscription(Bool, 
+                                 self.mission_completed_callback, 
+                                 qos_profile)
+
+
 
         self.ledColor_pub = self.create_publisher(Int16, 
                                                     '/cmd/led_strip/color', 
@@ -317,6 +340,10 @@ class led_manager(Node):
             self.get_logger().info(f'{param_name_lower}: {param_value}')
 
 
+    def mission_completed_callback(self, msg): 
+
+        mission_completed = msg.data
+
 
     # Imminent collision detected by the ultrasonic sensors 
     def collision_callback(self, msg):
@@ -350,15 +377,53 @@ class led_manager(Node):
         
         self.robot_state = msg.data
 
+        if self.robot_state == self.ROBOT_IN_GOAL: 
+         
+            self.get_logger().info('CHEGUEI NO GOAL')
+            
+            self.led_goal_reached = True
+            
+            self.start_time = self.get_clock().now()
+
+
+        # For keeping the signal on for a determined time
+        if (self.get_clock().now() - self.start_time) > self.LED_ON_TIME: 
+            
+            self.led_goal_reached = False 
+        
+
+        if self.last_goal_pose.theta == self.WAYPOINT_GOAL: 
+        
+            self.led_goal_signal = True
+            self.get_logger().info('TEM QUE LIGAR O LED')
+
+
+        if self.last_goal_pose.theta == self.GHOST_GOAL: 
+            
+            self.led_goal_signal = False
+            self.get_logger().warn('GHOST goal')
+
+
 
 
 
 
     def goal_current_callback(self, msg):
         
+
+        if self.goal_pose.x != msg.pose.position.x or self.goal_pose.y != msg.pose.position.y or self.goal_pose.theta != msg.pose.orientation.z: 
+
+            self.last_goal_pose.x = self.goal_pose.x 
+            self.last_goal_pose.y = self.goal_pose.y 
+            self.last_goal_pose.theta = self.goal_pose.theta 
+
+            self.get_logger().info('Changed goal !!!!!')
+
+
         self.goal_pose.x = msg.pose.position.x
         self.goal_pose.y = msg.pose.position.y
         self.goal_pose.theta = msg.pose.orientation.z
+
 
 
     def joyConnected_callback(self, msg): 
@@ -372,37 +437,6 @@ class led_manager(Node):
         self.odom_reset = msg.data
 
 
-    # When the robot reaches the goal, analize if that is one the it shoud signal  
-    # def goal_reached_callback(self, msg):
-
-    #     self.goal_reached = msg.data
-
-    #     if (self.goal_reached == True) and (self.last_goal_reached == False): 
-            
-    #         self.start_time = self.get_clock().now()
-    #         self.led_goal_reached = True
-        
-    #     else: 
-
-    #         self.led_goal_reached = False
-
-    #     self.last_goal_reached = self.goal_reached
-
-
-    #     # For keeping the signal on for a determined time
-    #     if (self.get_clock().now() - self.start_time) > self.LED_ON_TIME: 
-            
-    #         self.led_goal_reached = False 
-
-        
-
-    #     if self.goal_pose.theta == self.WAYPOINT_GOAL: 
-        
-    #         self.led_goal_signal = True
-        
-
-
-        
         
  
     def led_manager(self):
@@ -411,28 +445,6 @@ class led_manager(Node):
 
         # Evaluate the sinalization for the goal reached 
 
-        if self.robot_state == self.ROBOT_IN_GOAL: 
-
-            
-            self.led_goal_reached = True
-            self.start_time = self.get_clock().now()
-
-
-        # For keeping the signal on for a determined time
-        if (self.get_clock().now() - self.start_time) > self.LED_ON_TIME: 
-            
-            self.led_goal_reached = False 
-        
-
-        if self.goal_pose.theta == self.WAYPOINT_GOAL: 
-        
-            self.led_goal_signal = True
-
-
-        if self.goal_pose.theta == self.GHOST_GOAL: 
-            
-            self.led_goal_signal = False
-            self.get_logger().warn('GHOST goal')
 
                 
 
