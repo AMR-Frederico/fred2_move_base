@@ -102,8 +102,6 @@ class JoyInterfaceNode(Node):
 
         self.switchMode_pub = self.create_publisher(Bool, '/joy/machine_states/switch_mode', qos_profile) 
 
-        self.missionCompleted_pub = self.create_publisher(Bool, '/goal_manager/goal/mission_completed', qos_profile)
-
 
         # load params from the config file 
         self.load_params(node_path, node_group)
@@ -285,15 +283,10 @@ class JoyInterfaceNode(Node):
 
     def reset_robot_odom(self, status): 
 
-        
-        missionCompleted_msg = Bool()
-        missionCompleted_msg.data = False
-        self.missionCompleted_pub.publish(missionCompleted_msg)
 
         # reset the state of the main machine states, for the initial one 
         reset_msg = Bool()
         reset_msg.data = status
-        print(status)
         self.resetOdom_pub.publish(reset_msg)
 
     
