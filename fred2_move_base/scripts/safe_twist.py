@@ -378,63 +378,69 @@ class SafeTwistNode(Node):
 
     def safe_twist(self): 
         
-        if self.DISABLE_ULTRASONICS: 
             
-            self.stop_by_obstacle = False
-            braking_factor = 1
-        
-            self.get_logger().warn('The ultrasonic were deactivated')
+        if not self.user_abort_command: 
+            
+            
+            current_time = self.get_clock().now()
+
+            # Timeout to reset the joy_connected status 
+            if (current_time - self.last_joy_connected).nanoseconds > 2e9 and self.joy_connected: 
+                
+                self.joy_connected = False
+                self.get_logger().warn('Joy connection set to FALSE due to a timeout (no message received within the last 2 seconds).')
+
+                joy_status_msg = Bool()
+                joy_status_msg.data = False
+                self.joyConnect_pub.publish(joy_status_msg)
+
+            
+
+            # Timeout to reset the velocity command
+            if (current_time - self.last_vel_command_time).nanoseconds > 2e9: 
+                
+                self.cmd_vel.angular.z = 0.0
+                self.cmd_vel.linear.x = 0.0
+
+                self.get_logger().warn('Reset vel due to a timeout (no message received within the last 2 seconds).')
+            
+
+
+
+            if self.DISABLE_ULTRASONICS: 
+                
+                self.stop_by_obstacle = False
+                self.braking_factor = 1
+            
+                self.get_logger().warn('The ultrasonic were deactivated')
     
 
-        else: 
-            
-            if not self.user_abort_command: 
-                
-                
-                current_time = self.get_clock().now()
+            else: 
 
-                # Timeout to reset the joy_connected status 
-                if (current_time - self.last_joy_connected).nanoseconds > 2e9 and self.joy_connected: 
-                    
-                    self.joy_connected = False
-                    self.get_logger().warn('Joy connection set to FALSE due to a timeout (no message received within the last 2 seconds).')
-
-                    joy_status_msg = Bool()
-                    joy_status_msg.data = False
-                    self.joyConnect_pub.publish(joy_status_msg)
-
-                
-
-                # Timeout to reset the velocity command
-                if (current_time - self.last_vel_command_time).nanoseconds > 2e9: 
-                    
-                    self.cmd_vel.angular.z = 0.0
-                    self.cmd_vel.linear.x = 0.0
-
-                    self.get_logger().warn('Reset vel due to a timeout (no message received within the last 2 seconds).')
-                
-                
                 self.ultrasonic_obstacle_check()
 
+            
+
+
+            if self.stop_by_obstacle or not self.joy_connected: 
                 
-                if self.stop_by_obstacle or not self.joy_connected: 
-                    
-                    self.cmd_vel_safe.linear.x = self.robot_vel.linear.x * self.MOTOR_BRAKE_FACTOR
-                    self.cmd_vel_safe.angular.z = self.robot_vel.angular.z * self.MOTOR_BRAKE_FACTOR
+                self.cmd_vel_safe.linear.x = self.robot_vel.linear.x * self.MOTOR_BRAKE_FACTOR
+                self.cmd_vel_safe.angular.z = self.robot_vel.angular.z * self.MOTOR_BRAKE_FACTOR
 
 
 
-                else: 
-                    
-                    self.cmd_vel_safe.linear.x = self.cmd_vel.linear.x * self.braking_factor
-                    self.cmd_vel_safe.angular.z = self.cmd_vel.angular.z * self.braking_factor
-
-
-                # vel saturation
-                self.cmd_vel_safe.linear.x = max(min(self.cmd_vel_safe.linear.x, self.MAX_LINEAR_SPEED), - self.MAX_LINEAR_SPEED)
-                self.cmd_vel_safe.angular.z = max(min(self.cmd_vel_safe.angular.z, self.MAX_ANGULAR_SPEED), - self.MAX_ANGULAR_SPEED)
+            else: 
                 
-        
+                self.cmd_vel_safe.linear.x = self.cmd_vel.linear.x * self.braking_factor
+                self.cmd_vel_safe.angular.z = self.cmd_vel.angular.z * self.braking_factor
+
+
+
+            # vel saturation
+            self.cmd_vel_safe.linear.x = max(min(self.cmd_vel_safe.linear.x, self.MAX_LINEAR_SPEED), - self.MAX_LINEAR_SPEED)
+            self.cmd_vel_safe.angular.z = max(min(self.cmd_vel_safe.angular.z, self.MAX_ANGULAR_SPEED), - self.MAX_ANGULAR_SPEED)
+            
+    
 
         
         if self.stop_by_obstacle or self.user_abort_command or not self.joy_connected:
@@ -447,6 +453,7 @@ class SafeTwistNode(Node):
             self.robot_safety = True
 
 
+
         if self.joy_battery < 30: 
 
             self.get_logger().warn(f'!!!!!!!!!!!!!! JOYSTICK WITH LOW BATTERY: {self.joy_battery} !!!!!!!!!!!!!!!!!!!!!!!')
@@ -454,6 +461,8 @@ class SafeTwistNode(Node):
         else: 
 
             self.get_logger().warn(f'Joy battery: {self.joy_battery}%')
+
+
 
 
         self.robotSafety_msg.data = self.robot_safety
