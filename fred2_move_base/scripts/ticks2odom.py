@@ -134,7 +134,7 @@ class OdometryNode(Node):
 
 
         self.odom_broadcaster = TransformBroadcaster(self)
-        self.base_link_broadcaster = TransformBroadcaster(self)
+        # self.base_link_broadcaster = TransformBroadcaster(self)
 
 
 
@@ -365,20 +365,20 @@ class OdometryNode(Node):
 
         self.odom_broadcaster.sendTransform(odom_tf)
 
-        base_link_tf = TransformStamped()
+        # base_link_tf = TransformStamped()
 
-        base_link_tf.header.stamp = self.get_clock().now().to_msg()
-        base_link_tf.header.frame_id = 'base_footprint'
-        base_link_tf.child_frame_id = 'base_link'
-        base_link_tf.transform.translation.x = 0.0
-        base_link_tf.transform.translation.y = 0.0
-        base_link_tf.transform.translation.z = self.BASE_LINK_OFFSET
-        base_link_tf.transform.rotation.x = 0.0 # no rotation
-        base_link_tf.transform.rotation.y = 0.0 
-        base_link_tf.transform.rotation.z = 0.0
-        base_link_tf.transform.rotation.w = 1.0
+        # base_link_tf.header.stamp = self.get_clock().now().to_msg()
+        # base_link_tf.header.frame_id = 'base_footprint'
+        # base_link_tf.child_frame_id = 'base_link'
+        # base_link_tf.transform.translation.x = 0.0
+        # base_link_tf.transform.translation.y = 0.0
+        # base_link_tf.transform.translation.z = self.BASE_LINK_OFFSET
+        # base_link_tf.transform.rotation.x = 0.0 # no rotation
+        # base_link_tf.transform.rotation.y = 0.0 
+        # base_link_tf.transform.rotation.z = 0.0
+        # base_link_tf.transform.rotation.w = 1.0
 
-        self.base_link_broadcaster.sendTransform(base_link_tf)
+        # self.base_link_broadcaster.sendTransform(base_link_tf)
 
 
 if __name__ == '__main__': 
