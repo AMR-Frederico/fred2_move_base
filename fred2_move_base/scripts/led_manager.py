@@ -76,7 +76,7 @@ class led_manager(Node):
 
 
 
-    LED_ON_TIME = Duration(seconds=3) # It's also possible to specify nanoseconds
+    LED_ON_TIME = Duration(seconds=0.3) # It's also possible to specify nanoseconds
 
 
 
@@ -367,6 +367,67 @@ class led_manager(Node):
     def robot_state_callback(self, msg): 
         
         self.robot_state = msg.data
+        # Evaluate the sinalization for the goal reached 
+
+        if self.robot_state == self.ROBOT_IN_GOAL: 
+         
+            self.get_logger().info('CHEGUEI NO GOAL')
+            
+            self.led_goal_reached = True
+            
+            self.start_time = self.get_clock().now()
+
+
+        # For keeping the signal on for a determined time
+        if (self.get_clock().now() - self.start_time) > self.LED_ON_TIME: 
+            
+            self.led_goal_reached = False 
+        
+
+        if self.last_goal_pose.theta == self.WAYPOINT_GOAL: 
+        
+            self.led_goal_signal = True
+            self.get_logger().info('TEM QUE LIGAR O LED')
+
+
+        if self.last_goal_pose.theta == self.GHOST_GOAL: 
+            
+            self.led_goal_signal = False
+            self.get_logger().warn('GHOST goal')
+
+
+        #* Colors for the robot state: 
+
+        if self.robot_state == self.ROBOT_EMERGENCY: 
+
+            self.led_color.data = self.RED
+
+        
+        else: 
+
+
+            if self.robot_state == self.ROBOT_AUTONOMOUS: 
+
+                self.led_color.data = self.BLUE
+
+
+                if (self.led_goal_reached == True) and (self.led_goal_signal == True):
+
+                    self.get_logger().warn('GOAL SIGNAL -> LED ON')
+                    self.led_color.data = self.GREEN
+
+
+
+            if self.robot_state == self.ROBOT_MISSION_COMPLETED:
+
+                self.led_color.data = self.YELLOW
+
+
+
+
+            if self.robot_state == self.ROBOT_MANUAL: 
+
+                self.led_color.data = self.WHITE
 
 
 
@@ -404,108 +465,48 @@ class led_manager(Node):
  
     def led_manager(self):
 
-        # Evaluate the sinalization for the goal reached 
-
-        if self.robot_state == self.ROBOT_IN_GOAL: 
-         
-            self.get_logger().info('CHEGUEI NO GOAL')
-            
-            self.led_goal_reached = True
-            
-            self.start_time = self.get_clock().now()
-
-
-        # For keeping the signal on for a determined time
-        if (self.get_clock().now() - self.start_time) > self.LED_ON_TIME: 
-            
-            self.led_goal_reached = False 
-        
-
-        if self.last_goal_pose.theta == self.WAYPOINT_GOAL: 
-        
-            self.led_goal_signal = True
-            self.get_logger().info('TEM QUE LIGAR O LED')
-
-
-        if self.last_goal_pose.theta == self.GHOST_GOAL: 
-            
-            self.led_goal_signal = False
-            self.get_logger().warn('GHOST goal')
 
                 
 
-        #* Colors for the robot state: 
-
-        if self.robot_state == self.ROBOT_EMERGENCY: 
-
-            self.led_color.data = self.RED
-
-        
-        else: 
-
-
-            if self.robot_state == self.ROBOT_AUTONOMOUS: 
-
-                self.led_color.data = self.BLUE
-
-
-                if (self.led_goal_reached == True) and (self.led_goal_signal == True):
-
-                    self.get_logger().warn('GOAL SIGNAL -> LED ON')
-                    self.led_color.data = self.GREEN
-
-
-
-            if self.robot_state == self.ROBOT_MISSION_COMPLETED:
-
-                self.led_color.data = self.YELLOW
-
-
-
-
-            if self.robot_state == self.ROBOT_MANUAL: 
-
-                self.led_color.data = self.WHITE
-
-            
+        self.ledColor_pub.publish(self.led_color) 
 
 
         
-        #* Colors for debug the robot states:
+        # #* Colors for debug the robot states:
                 
-        if self.collision_detected: 
+        # if self.collision_detected: 
 
-            self.led_debug.data = self.ORANGE
+        #     self.led_debug.data = self.ORANGE
         
 
-        elif self.user_stop_command: 
+        # elif self.user_stop_command: 
             
-            self.led_debug.data = self.PINK
+        #     self.led_debug.data = self.PINK
         
 
-        elif not self.joy_connected: 
+        # elif not self.joy_connected: 
 
-            self.led_debug.data = self.PURPLE
+        #     self.led_debug.data = self.PURPLE
 
 
-        elif self.ultrasonic_disabled: 
+        # elif self.ultrasonic_disabled: 
 
-            self.led_debug.data = self.YELLOW
+        #     self.led_debug.data = self.YELLOW
         
         
-        elif self.odom_reset: 
+        # elif self.odom_reset: 
             
-            self.led_debug.data = self.LIGHT_GREEN
+        #     self.led_debug.data = self.LIGHT_GREEN
 
 
-        else: 
+        # else: 
             
-            self.led_debug.data = self.BLACK
+        #     self.led_debug.data = self.BLACK
 
 
 
         self.ledColor_pub.publish(self.led_color) 
-        self.ledDebug_pub.publish(self.led_debug)
+        # self.ledDebug_pub.publish(self.led_debug)
 
 
         if debug_mode: 
@@ -535,7 +536,7 @@ if __name__ == '__main__':
     thread = threading.Thread(target=rclpy.spin, args=(node, ), daemon=True)
     thread.start()
 
-    rate = node.create_rate(1)
+    rate = node.create_rate(10)
 
     try: 
         while rclpy.ok(): 
