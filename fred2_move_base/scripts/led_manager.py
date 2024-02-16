@@ -370,9 +370,7 @@ class led_manager(Node):
         # Evaluate the sinalization for the goal reached 
 
         if self.robot_state == self.ROBOT_IN_GOAL: 
-         
-            self.get_logger().info('CHEGUEI NO GOAL')
-            
+                     
             self.led_goal_reached = True
             
             self.start_time = self.get_clock().now()
@@ -387,13 +385,11 @@ class led_manager(Node):
         if self.last_goal_pose.theta == self.WAYPOINT_GOAL: 
         
             self.led_goal_signal = True
-            self.get_logger().info('TEM QUE LIGAR O LED')
 
 
         if self.last_goal_pose.theta == self.GHOST_GOAL: 
             
             self.led_goal_signal = False
-            self.get_logger().warn('GHOST goal')
 
 
         #* Colors for the robot state: 

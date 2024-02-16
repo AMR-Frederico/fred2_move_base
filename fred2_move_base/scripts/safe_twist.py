@@ -412,7 +412,7 @@ class SafeTwistNode(Node):
                 self.stop_by_obstacle = False
                 self.braking_factor = 1
             
-                self.get_logger().warn('The ultrasonic were deactivated')
+                # self.get_logger().warn('The ultrasonic were deactivated')
     
 
             else: 
