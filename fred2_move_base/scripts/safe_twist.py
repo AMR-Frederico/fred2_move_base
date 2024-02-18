@@ -22,8 +22,6 @@ from nav_msgs.msg import Odometry
 
 # Node execution arguments 
 debug_mode = '--debug' in sys.argv
-use_robot_localization = '--use-robot-localization' in sys.argv
-
 
 # Parameters file (yaml)
 node_path = '~/ros2_ws/src/fred2_move_base/config/move_base_params.yaml'
@@ -140,24 +138,11 @@ class SafeTwistNode(Node):
                                  10)
 
 
-        if use_robot_localization: 
-            
-            self.get_logger().warn('Using ROBOT LOCALIZATION odometry')
 
-            self.create_subscription(Odometry, 
-                            '/odometry/filtered', 
-                            self.odom_callback, 
-                            qos_profile)
-        
-
-        else: 
-            
-            self.get_logger().warn('Using MOVE BASE odometry')
-
-            self.create_subscription(Odometry, 
-                                    '/odom', 
-                                    self.odom_callback, 
-                                    qos_profile)
+        self.create_subscription(Odometry, 
+                                '/odom', 
+                                self.odom_callback, 
+                                qos_profile)
             
 
     
@@ -504,7 +489,7 @@ if __name__ == '__main__':
     node = SafeTwistNode(
         node_name='safe_twist',
         context=safe_context,
-        cli_args=['--debug', '--use-robot-localization'],
+        cli_args=['--debug'],
         namespace='move_base',
         enable_rosout=False
     )
