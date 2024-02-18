@@ -31,10 +31,10 @@ safe_twist:
  
   motor_brake_factor: -1 
  
-  max_linear_speed: 2.0  
+  max_linear_speed: 2.5  
   max_angular_speed: 20.0
 
-  disable_ultrasonics: false
+  disable_ultrasonics: true
 
 
 
