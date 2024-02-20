@@ -21,7 +21,7 @@ from geometry_msgs.msg import PoseStamped, Pose2D
 
 
 # Parameters file (yaml)
-led_path = '~/ros2_ws/src/fred2_move_base/config/move_base_params.yaml'
+led_path = '/home/ubuntu/ros2_ws/src/fred2_move_base/config/move_base_params.yaml'
 led_group = 'led_manager'
 
 

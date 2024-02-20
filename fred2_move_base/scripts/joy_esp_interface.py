@@ -21,7 +21,7 @@ from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Joy
 
 # Parameters file (yaml)
-node_path = '~/ros2_ws/src/fred2_move_base/config/move_base_params.yaml'
+node_path = '/home/ubuntu/ros2_ws/src/fred2_move_base/config/move_base_params.yaml'
 node_group = 'joy_esp_interface'
 
 

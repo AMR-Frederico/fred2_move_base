@@ -24,7 +24,7 @@ from nav_msgs.msg import Odometry
 debug_mode = '--debug' in sys.argv
 
 # Parameters file (yaml)
-node_path = '~/ros2_ws/src/fred2_move_base/config/move_base_params.yaml'
+node_path = '/home/ubuntu/ros2_ws/src/fred2_move_base/config/move_base_params.yaml'
 node_group = 'safe_twist'
 
 
