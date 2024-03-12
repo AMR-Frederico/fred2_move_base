@@ -135,6 +135,10 @@ class JoyInterfaceNode(Node):
 
         if param.name == 'drift_analog_tolerance': 
             self.DRIFT_ANALOG_TOLERANCE = param.value
+
+        
+        if param.name == 'debug': 
+            self.DEBUG = param.value
     
 
 
@@ -168,6 +172,8 @@ class JoyInterfaceNode(Node):
         self.MAX_VEL_JOY_ANGULAR = self.get_parameter('max_vel_joy_angular').value
         self.MAX_VALUE_CONTROLLER = self.get_parameter('max_value_controller').value
         self.DRIFT_ANALOG_TOLERANCE = self.get_parameter('drift_analog_tolerance').value
+
+        self.DEBUG = self.get_parameter('debug').value
 
         # Get global params 
 
@@ -332,7 +338,8 @@ class JoyInterfaceNode(Node):
 
 
         
-        if debug_mode: 
+        if debug_mode or self.DEBUG: 
+            
             self.get_logger().info(f'Velocity -> linear:{vel_linear} | angular:{vel_angular}\n')
             self.get_logger().info(f'Reset odometry -> {self.reset_odom}')
             self.get_logger().info(f'Switch mode -> {self.switch_mode}')

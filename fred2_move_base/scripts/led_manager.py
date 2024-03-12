@@ -76,7 +76,7 @@ class led_manager(Node):
 
 
 
-    LED_ON_TIME = Duration(seconds=0.3) # It's also possible to specify nanoseconds
+    LED_ON_TIME = Duration(seconds=0.5) # It's also possible to specify nanoseconds
 
 
 
@@ -173,6 +173,11 @@ class led_manager(Node):
                                  qos_profile)
 
 
+        self.create_subscription(Bool, 
+                                 '/goal_manager/goal/sinalization', 
+                                 self.goal_sinalization, 
+                                 qos_profile)
+
 
         self.ledColor_pub = self.create_publisher(Int16, 
                                                     '/cmd/led_strip/color', 
@@ -251,6 +256,10 @@ class led_manager(Node):
         if param.name == 'ghost_goal': 
             self.GHOST_GOAL = param.value
 
+        
+        if param.name == 'debug': 
+            self.DEBUG = param.value
+
 
 
         return SetParametersResult(successful=True)
@@ -274,6 +283,8 @@ class led_manager(Node):
 
         self.WAYPOINT_GOAL = self.get_parameter('waypoint_goal').value
         self.GHOST_GOAL = self.get_parameter('ghost_goal').value
+
+        self.DEBUG = self.get_parameter('debug').value
 
         
         # Get global params 
@@ -363,15 +374,15 @@ class led_manager(Node):
 
 
 
-    # Current robot state
-    def robot_state_callback(self, msg): 
-        
-        self.robot_state = msg.data
-        # Evaluate the sinalization for the goal reached 
+    def goal_sinalization(self, msg): 
 
-        if self.robot_state == self.ROBOT_IN_GOAL: 
+        self.led_sinalization = msg.data
+
+        if self.led_sinalization: 
                      
             self.led_goal_reached = True
+
+            self.get_logger().warn('ROBOT IN GOAL')
             
             self.start_time = self.get_clock().now()
 
@@ -382,48 +393,40 @@ class led_manager(Node):
             self.led_goal_reached = False 
         
 
-        if self.last_goal_pose.theta == self.WAYPOINT_GOAL: 
+
+
+    # Current robot state
+    def robot_state_callback(self, msg): 
         
-            self.led_goal_signal = True
+        self.robot_state = msg.data
 
 
-        if self.last_goal_pose.theta == self.GHOST_GOAL: 
+        # Evaluate the sinalization for the goal reached 
+
+        # if self.robot_state == self.ROBOT_IN_GOAL: 
+                     
+        #     self.led_goal_reached = True
             
-            self.led_goal_signal = False
+        #     self.start_time = self.get_clock().now()
 
 
-        #* Colors for the robot state: 
-
-        if self.robot_state == self.ROBOT_EMERGENCY: 
-
-            self.led_color.data = self.RED
-
+        # # For keeping the signal on for a determined time
+        # if (self.get_clock().now() - self.start_time) > self.LED_ON_TIME: 
+            
+        #     self.led_goal_reached = False 
         
-        else: 
+
+        # if self.last_goal_pose.theta == self.WAYPOINT_GOAL: 
+        
+        #     self.led_goal_signal = True
 
 
-            if self.robot_state == self.ROBOT_AUTONOMOUS: 
-
-                self.led_color.data = self.BLUE
-
-
-                if (self.led_goal_reached == True) and (self.led_goal_signal == True):
-
-                    self.get_logger().warn('GOAL SIGNAL -> LED ON')
-                    self.led_color.data = self.GREEN
+        # if self.last_goal_pose.theta != self.WAYPOINT_GOAL: 
+            
+        #     self.led_goal_signal = False
 
 
-
-            if self.robot_state == self.ROBOT_MISSION_COMPLETED:
-
-                self.led_color.data = self.YELLOW
-
-
-
-
-            if self.robot_state == self.ROBOT_MANUAL: 
-
-                self.led_color.data = self.WHITE
+ 
 
 
 
@@ -461,7 +464,38 @@ class led_manager(Node):
  
     def led_manager(self):
 
+        # #* Colors for the robot state: 
 
+        if self.robot_state == self.ROBOT_EMERGENCY: 
+
+            self.led_color.data = self.RED
+
+        
+        else: 
+
+
+            if self.robot_state == self.ROBOT_AUTONOMOUS: 
+
+                self.led_color.data = self.BLUE
+
+
+                if (self.led_goal_reached == True):
+
+                    self.get_logger().warn('GOAL SIGNAL -> LED ON')
+                    self.led_color.data = self.GREEN
+
+
+
+            if self.robot_state == self.ROBOT_MISSION_COMPLETED:
+
+                self.led_color.data = self.YELLOW
+
+
+
+
+            if self.robot_state == self.ROBOT_MANUAL: 
+
+                self.led_color.data = self.WHITE
                 
 
         self.ledColor_pub.publish(self.led_color) 
@@ -501,11 +535,11 @@ class led_manager(Node):
 
 
 
-        self.ledColor_pub.publish(self.led_color) 
+        # self.ledColor_pub.publish(self.led_color) 
         # self.ledDebug_pub.publish(self.led_debug)
 
 
-        if debug_mode: 
+        if debug_mode or self.DEBUG: 
 
             self.get_logger().info(f"Color: {self.led_color.data}")
             self.get_logger().info(f"Debug color: {self.led_debug.data}")

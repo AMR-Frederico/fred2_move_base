@@ -32,6 +32,9 @@ class SafeTwistNode(Node):
 
     smallest_reading = 1000
 
+    reload_params_t_threshold = 100
+    reload_params_t = 0
+
     stop_by_obstacle = False 
 
     left_ultrasonic_distance = 1000
@@ -46,6 +49,7 @@ class SafeTwistNode(Node):
     robot_vel = Twist()
 
     cmd_vel_safe = Twist()
+    cmd_vel_safe_old = Twist()
     cmd_vel = Twist()
     vel_timeout = False
 
@@ -82,7 +86,8 @@ class SafeTwistNode(Node):
                          enable_rosout=enable_rosout, 
                          start_parameter_services=start_parameter_services, 
                          parameter_overrides=parameter_overrides)
-        
+    
+
 
 
         # quality protocol -> the node must not lose any message 
@@ -188,6 +193,8 @@ class SafeTwistNode(Node):
 
 
 
+
+
     def parameters_callback(self, params):
         
         for param in params:
@@ -211,8 +218,12 @@ class SafeTwistNode(Node):
             self.MAX_ANGULAR_SPEED = param.value
 
         
-        if param.name =='disable_ultrasonics': 
+        if param.name == 'disable_ultrasonics': 
             self.DISABLE_ULTRASONICS = param.value
+
+    
+        if param.name == 'debug': 
+            self.DEBUG = param.value
 
 
 
@@ -239,11 +250,15 @@ class SafeTwistNode(Node):
 
 
     def get_params(self): 
+
         self.SAFE_DISTANCE = self.get_parameter('safe_distance').value 
         self.MOTOR_BRAKE_FACTOR = self.get_parameter('motor_brake_factor').value
         self.MAX_LINEAR_SPEED = self.get_parameter('max_linear_speed').value
         self.MAX_ANGULAR_SPEED = self.get_parameter('max_angular_speed').value
         self.DISABLE_ULTRASONICS = self.get_parameter('disable_ultrasonics').value
+        self.DEBUG = self.get_parameter('debug').value
+        self.ACCEL_ITERATOR_FACTOR = self.get_parameter('accel_iterator_factor').value
+        self.ACCEL_RAMP_TOLERENCE = self.get_parameter('accel_ramp_tolerence').value
 
 
 
@@ -313,7 +328,7 @@ class SafeTwistNode(Node):
 
         self.abort_previous_flag = self.abort_flag
         
-
+        # Stop Motor
         if self.user_abort_command: 
             
             self.get_logger().warn('User STOP command -> Stopping the robot')
@@ -416,6 +431,21 @@ class SafeTwistNode(Node):
 
             else: 
                 
+                # dif_vel = (self.cmd_vel.linear.x - self.cmd_vel_safe_old.linear.x)
+                # if abs(dif_vel) >= self.ACCEL_RAMP_TOLERENCE:
+                    
+                #     # evitando oscilacao em 0
+                #     if -self.ACCEL_RAMP_TOLERENCE < self.cmd_vel.linear.x and self.cmd_vel.linear.x < self.ACCEL_RAMP_TOLERENCE:
+                #         self.cmd_vel_safe.linear.x = 0.0
+
+                #     else:
+                #         multiply_signal = (dif_vel)/abs(dif_vel)
+                #         self.cmd_vel_safe.linear.x = self.cmd_vel_safe_old.linear.x + multiply_signal * self.ACCEL_ITERATOR_FACTOR
+
+                # elif self.cmd_vel.linear.x == 0.0:
+                #     self.cmd_vel_safe.linear.x = 0.0
+
+                
                 self.cmd_vel_safe.linear.x = self.cmd_vel.linear.x * self.braking_factor
                 self.cmd_vel_safe.angular.z = self.cmd_vel.angular.z * self.braking_factor
 
@@ -424,7 +454,9 @@ class SafeTwistNode(Node):
             # vel saturation
             self.cmd_vel_safe.linear.x = max(min(self.cmd_vel_safe.linear.x, self.MAX_LINEAR_SPEED), - self.MAX_LINEAR_SPEED)
             self.cmd_vel_safe.angular.z = max(min(self.cmd_vel_safe.angular.z, self.MAX_ANGULAR_SPEED), - self.MAX_ANGULAR_SPEED)
-            
+
+            # Set old vels
+            self.cmd_vel_safe_old = self.cmd_vel_safe
     
 
         
@@ -464,7 +496,7 @@ class SafeTwistNode(Node):
             
         
 
-        if debug_mode: 
+        if debug_mode or self.DEBUG: 
 
             self.get_logger().warn(f'Robot safety -> {self.robot_safety}')
             self.get_logger().info(f'Emergency mode -> user comand abort: {self.user_abort_command} | collision detected: {self.stop_by_obstacle}')
@@ -474,6 +506,12 @@ class SafeTwistNode(Node):
             self.get_logger().info(f'Velocity command -> linear: {self.cmd_vel.linear.x} | angular: {self.cmd_vel.angular.z} | braking_factor: {self.braking_factor}')
             self.get_logger().info(f'Safe velocity command -> linear: {self.cmd_vel_safe.linear.x} | angular: {self.cmd_vel_safe.angular.z}\n')
 
+        # reload params
+        if self.reload_params_t > self.reload_params_t_threshold:
+            self.get_params()
+            self.reload_params_t = 0
+        else:
+            self.reload_params_t = self.reload_params_t + 1
 
 
 

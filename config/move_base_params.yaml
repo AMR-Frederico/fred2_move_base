@@ -20,6 +20,8 @@ led_manager:
   waypoint_goal: 0  # Goals points that the robot must signal
   ghost_goal: 1 
 
+  debug: False
+
 
 ################################################################################################################ 
 ########### SAFE TWIST
@@ -31,10 +33,15 @@ safe_twist:
  
   motor_brake_factor: -1 
  
-  max_linear_speed: 2.5  
-  max_angular_speed: 20.0
+  max_linear_speed: 3.5  
+  max_angular_speed: 25.0
 
   disable_ultrasonics: true
+
+  debug: False
+
+  accel_iterator_factor: 0.7
+  accel_ramp_tolerence: 0.05
 
 
 
@@ -51,6 +58,8 @@ joy_esp_interface:
   
   drift_analog_tolerance: 20 
 
+  debug: False
+
 
 
 
@@ -59,10 +68,13 @@ joy_esp_interface:
 ################################################################################################################
 
 odometry:
+
   wheels_track: 0.3800  # distance in meters 
   wheels_radius: 0.075  # distance in meters 
   ticks_per_revolution: 7200 # 2400 * 3
   base_link_offset: 0.08 # distance (in meters) between the base_footprint and base_link 
+
+  debug: False
 
 
   

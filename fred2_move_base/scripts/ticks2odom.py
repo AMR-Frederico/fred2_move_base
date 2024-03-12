@@ -161,6 +161,10 @@ class OdometryNode(Node):
 
         if param.name == 'base_link_offset': 
             self.BASE_LINK_OFFSET = param.value
+
+        
+        if param.name == 'debug': 
+            self.DEBUG = param.value
         
 
 
@@ -225,6 +229,8 @@ class OdometryNode(Node):
         self.WHEELS_RADIUS = self.get_parameter('wheels_radius').value
         self.TICKS_PER_TURN = self.get_parameter('ticks_per_revolution').value
         self.BASE_LINK_OFFSET = self.get_parameter('base_link_offset').value
+
+        self.DEBUG = self.get_parameter('debug').value
 
 
 
@@ -307,7 +313,8 @@ class OdometryNode(Node):
         self.last_time = self.current_time    
 
 
-        if debug_mode: 
+        if debug_mode or self.DEBUG: 
+
             node.get_logger().info(f'Position -> x: {self.x_pos} | y: {self.y_pos} | theta: {self.theta}')
             node.get_logger().info(f'Velocity -> x: {self.linear_vel_x} | y: {self.linear_vel_y} | theta: {self.angular_vel_theta}')
             node.get_logger().info(f'Ticks -> left: {self.left_wheels_ticks} | right: {self.right_wheels_ticks} \n')
