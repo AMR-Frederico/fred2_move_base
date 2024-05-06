@@ -43,15 +43,10 @@ pip install transforms3d
 
 ### Launch
 
-**Considering `Robot Localization` for odometry and `Robot Descriptor` for publish the TFs:**
 ```
 ros2 launch fred2_move_base move_base.launch.py
 ```
 
-**Considering `Move Base Odometry` to publish odom and TF:**
-```
-ros2 launch fred2_move_base move_base_with_odom_tf.launch.py
-```
 
 ### Joystick commands
 
@@ -121,17 +116,43 @@ Determinate the LED strip's color basead on the robot state. Responsable for the
 - `WAYPOINT_GOAL`: Index to indicate goals points that the robot must signal
 - `GHOST_GOAL`: Index to indicate ghost goals
 
+- `DEBUG`: Enables the debug prints.
+
+- `UNIT_TEST`: Allows the node to run isolated .
+
+#### To check available parameters 
+```
+ros2 param list 
+```
+
+#### To check the parameter description
+```
+ros2 param describe /move_base/led_manager <parameter name>
+
+```
+
+#### To check the parameter value
+```
+ros2 param get /move_base/led_manager <parameter name>
+```
+
+#### To reload the parameters file
+```
+ros2 param load /move_base/led_manager <path-to-parameter-config-file>
+```
+
+
 
 ### Run 
 **Default:**
 
 ```
-ros2 run fred2_move_base led_manager.py
+ros2 run fred2_move_base led_manager.py --ros-args --params-file <path-to-parameter-config-file>
 ```
 
 **Enable debug:**
 ```
-ros2 run fred2_move_base led_manager.py --debug
+ros2 run fred2_move_base led_manager.py --ros-args --params-file <path-to-parameter-config-file> --debug
 ```
 
 ----- 
@@ -184,18 +205,41 @@ The node is responsible for managing the velocity commands of a robot based on s
 
 - `DISABLE_ULTRASONICS`: Parameter for disable the ultrasonics reading, therefore, disable detection alert
 
+- `DEBUG`: Enables the debug prints.
+
+#### To check available parameters 
+```
+ros2 param list 
+```
+
+#### To check the parameter description
+```
+ros2 param describe /move_base/safe_twist <parameter name>
+
+```
+
+#### To check the parameter value
+```
+ros2 param get /move_base/safe_twist <parameter name>
+```
+
+#### To reload the parameters file
+```
+ros2 param load /move_base/safe_twist <path-to-parameter-config-file>
+```
+
 
 
 ### Run 
 **Default:**
 
 ```
-ros2 run fred2_move_base safe_twist.py
+ros2 run fred2_move_base safe_twist.py  --ros-args --params-file <path-to-parameter-config-file>
 ```
 
 **Enable debug:**
 ```
-ros2 run fred2_move_base safe_twist.py --debug
+ros2 run fred2_move_base safe_twist.py  --ros-args --params-file <path-to-parameter-config-file> --debug
 ```
 
 ---
@@ -248,17 +292,41 @@ The Joy Interface is a node that interfaces with a joystick (e.g., PS4 controlle
 - `MAX_VALUE_CONTROLLERr`: Maximum value of analog joystick input.
 - `DRIFT_ANALOG_TOLERANCE`: Minimum threshold for joystick input to be considered.
 
+- `DEBUG`: Enables the debug prints.
+
+- `UNIT_TEST`: Allows the node to run isolated .
+
+#### To check available parameters 
+```
+ros2 param list 
+```
+
+#### To check the parameter description
+```
+ros2 param describe /move_base/joy_esp_interface <parameter name>
+
+```
+
+#### To check the parameter value
+```
+ros2 param get /move_base/joy_esp_interface <parameter name>
+```
+
+#### To reload the parameters file
+```
+ros2 param load /move_base/joy_esp_interface <path-to-parameter-config-file>
+```
 
 ### Run 
 **Default:**
 
 ```
-ros2 run fred2_move_base joy_esp_interface.py
+ros2 run fred2_move_base joy_esp_interface.py --ros-args --params-file <path-to-parameter-config-file>
 ```
 
 **Enable debug:**
 ```
-ros2 run fred2_move_base joy_esp_interface.py --debug
+ros2 run fred2_move_base joy_esp_interface.py --ros-args --params-file <path-to-parameter-config-file> --debug
 ```
 ---
 
@@ -291,23 +359,39 @@ The Odometry Node is responsible for calculating and publishing odometry informa
 - `WHEELS_RADIUS`: Radius of the wheel in meters.
 - `TICKS_PER_REVOLUTION`: Ticks per turn for the wheel encoder.
 - `BASE_LINK_OFFSET`: Distance (in meters) between the `base_footprint` and `base_link` 
+- `DEBUG`: Enables the debug prints.
 
+#### To check available parameters 
+```
+ros2 param list 
+```
+
+#### To check the parameter description
+```
+ros2 param describe /move_base/odometry <parameter name>
+
+```
+
+#### To check the parameter value
+```
+ros2 param get /move_base/odometry <parameter name>
+```
+
+#### To reload the parameters file
+```
+ros2 param load /move_base/odometry <path-to-parameter-config-file>
+```
 
 ### Run 
 **Default:**
 
 ```
-ros2 run fred2_move_base ticks2odom.py
+ros2 run fred2_move_base ticks2odom.py   --ros-args --params-file <path-to-parameter-config-file>
 ```
 
 **Enable debug:**
 ```
-ros2 run fred2_move_base ticks2odom.py --debug
+ros2 run fred2_move_base ticks2odom.py   --ros-args --params-file <path-to-parameter-config-file> --debug
 ```
 
-**Publish `odom`, `base_link` and `base_footprint` TF:**
-```
-ros2 run fred2_move_base ticks2odom.py --publish-tf
-```
----- 
 

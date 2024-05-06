@@ -7,12 +7,12 @@ import yaml
 
 from typing import List, Optional
 
-from rclpy.qos import QoSPresetProfiles, QoSProfile, QoSHistoryPolicy, QoSLivelinessPolicy, QoSReliabilityPolicy, QoSDurabilityPolicy
-from rclpy.executors import SingleThreadedExecutor, MultiThreadedExecutor
-from rclpy.parameter import Parameter
 from rclpy.context import Context 
-from rclpy.node import Node
+from rclpy.node import Node, ParameterDescriptor
 from rcl_interfaces.msg import SetParametersResult
+from rclpy.parameter import Parameter, ParameterType
+from rclpy.executors import SingleThreadedExecutor, MultiThreadedExecutor
+from rclpy.qos import QoSPresetProfiles, QoSProfile, QoSHistoryPolicy, QoSLivelinessPolicy, QoSReliabilityPolicy, QoSDurabilityPolicy
 
 from std_msgs.msg import Bool, Float32, Int16
 from sensor_msgs.msg import Joy
@@ -22,11 +22,6 @@ from nav_msgs.msg import Odometry
 
 # Node execution arguments 
 debug_mode = '--debug' in sys.argv
-
-# Parameters file (yaml)
-node_path = '/home/ubuntu/ros2_ws/src/fred2_move_base/config/move_base_params.yaml'
-node_group = 'safe_twist'
-
 
 class SafeTwistNode(Node):
 
@@ -182,7 +177,7 @@ class SafeTwistNode(Node):
 
 
         # get params from the config file
-        self.load_params(node_path, node_group)
+        self.load_params()
         self.get_params()
 
 
@@ -220,8 +215,7 @@ class SafeTwistNode(Node):
         
         if param.name == 'disable_ultrasonics': 
             self.DISABLE_ULTRASONICS = param.value
-
-    
+        
         if param.name == 'debug': 
             self.DEBUG = param.value
 
@@ -231,21 +225,19 @@ class SafeTwistNode(Node):
 
 
 
-    def load_params(self, path, group): 
-        param_path = os.path.expanduser(path)
-
-        with open(param_path, 'r') as params_list: 
-            params = yaml.safe_load(params_list)
-        
-        # Get the params inside the specified group
-        params = params.get(group, {})
-
-        # Declare parameters with values from the YAML file
-        for param_name, param_value in params.items():
-            # Adjust parameter name to lowercase
-            param_name_lower = param_name.lower()
-            self.declare_parameter(param_name_lower, param_value)
-            self.get_logger().info(f'{param_name_lower}: {param_value}')
+    def load_params(self):
+        # Declare parameters related to ultrasonic sensors, velocity limits, and debugging/testing
+        self.declare_parameters(
+            namespace='',
+            parameters=[
+                ('disable_ultrasonics', None, ParameterDescriptor(description='Toggle ultrasonic sensors on/off', type=ParameterType.PARAMETER_BOOL)),
+                ('safe_distance', None, ParameterDescriptor(description='Stopping distance in cm when detecting an object with ultrasonic sensors', type=ParameterType.PARAMETER_DOUBLE)),
+                ('max_angular_speed', None, ParameterDescriptor(description='Maximum angular speed in degrees per second', type=ParameterType.PARAMETER_DOUBLE)),
+                ('max_linear_speed', None, ParameterDescriptor(description='Maximum linear speed in meters per second', type=ParameterType.PARAMETER_DOUBLE)),
+                ('motor_brake_factor', None, ParameterDescriptor(description='Brake factor for motors; negative values indicate braking force', type=ParameterType.PARAMETER_INTEGER)),
+                ('debug', None, ParameterDescriptor(description='Enable debug prints for troubleshooting', type=ParameterType.PARAMETER_BOOL))
+            ]
+        )
 
 
 
@@ -257,8 +249,6 @@ class SafeTwistNode(Node):
         self.MAX_ANGULAR_SPEED = self.get_parameter('max_angular_speed').value
         self.DISABLE_ULTRASONICS = self.get_parameter('disable_ultrasonics').value
         self.DEBUG = self.get_parameter('debug').value
-        self.ACCEL_ITERATOR_FACTOR = self.get_parameter('accel_iterator_factor').value
-        self.ACCEL_RAMP_TOLERENCE = self.get_parameter('accel_ramp_tolerence').value
 
 
 

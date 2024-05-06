@@ -2,16 +2,14 @@
 
 import rclpy
 import threading
-import yaml 
 import sys
-import os
 import transforms3d as tf3d     # angle manipulaton 
 
 from typing import List, Optional
 
-from rclpy.node import Node
 from rclpy.context import Context 
-from rclpy.parameter import Parameter
+from rclpy.node import Node, ParameterDescriptor
+from rclpy.parameter import Parameter, ParameterType
 from rclpy.executors import SingleThreadedExecutor
 from rclpy.qos import QoSPresetProfiles, QoSProfile, QoSHistoryPolicy, QoSLivelinessPolicy, QoSReliabilityPolicy, QoSDurabilityPolicy
 from rcl_interfaces.msg import SetParametersResult
@@ -24,10 +22,6 @@ from std_msgs.msg import Int32, Bool
 from sensor_msgs.msg import Imu
 from geometry_msgs.msg import TransformStamped
 from nav_msgs.msg import Odometry
-
-# Parameters file (yaml)
-node_path = '/home/ubuntu/ros2_ws/src/fred2_move_base/config/move_base_params.yaml'
-node_group = 'odometry'
 
 # Node execution arguments 
 debug_mode = '--debug' in sys.argv
@@ -123,7 +117,7 @@ class OdometryNode(Node):
         self.odom_pub = self.create_publisher(Odometry, '/odom', qos_profile)
 
 
-        self.load_params(node_path, node_group)
+        self.load_params()
         self.get_params()
 
 
@@ -161,7 +155,7 @@ class OdometryNode(Node):
 
         if param.name == 'base_link_offset': 
             self.BASE_LINK_OFFSET = param.value
-
+        
         
         if param.name == 'debug': 
             self.DEBUG = param.value
@@ -205,22 +199,18 @@ class OdometryNode(Node):
 
 
 
-    def load_params(self, path, group): 
-
-        param_path = os.path.expanduser(path)
-
-        with open(param_path, 'r') as params_list: 
-            params = yaml.safe_load(params_list)
-        
-        # Get the params inside the specified group
-        params = params.get(group, {})
-
-        # Declare parameters with values from the YAML file
-        for param_name, param_value in params.items():
-            # Adjust parameter name to lowercase
-            param_name_lower = param_name.lower()
-            self.declare_parameter(param_name_lower, param_value)
-            self.get_logger().info(f'{param_name_lower}: {param_value}')
+    def load_params(self):
+        # Declare parameters related to robot dimensions, encoder configuration, and debugging/testing
+        self.declare_parameters(
+            namespace='',
+            parameters=[
+                ('base_link_offset', None, ParameterDescriptor(description='Offset of the base link from the ground in meters', type=ParameterType.PARAMETER_DOUBLE)),
+                ('wheels_radius', None, ParameterDescriptor(description='Radius of the wheels in meters', type=ParameterType.PARAMETER_DOUBLE)),
+                ('wheels_track', None, ParameterDescriptor(description='Distance between the centers of the left and right wheels in meters', type=ParameterType.PARAMETER_DOUBLE)),
+                ('ticks_per_revolution', None, ParameterDescriptor(description='Number of encoder ticks per revolution of the wheel', type=ParameterType.PARAMETER_INTEGER)),
+                ('debug', None, ParameterDescriptor(description='Enable debug prints for troubleshooting', type=ParameterType.PARAMETER_BOOL))
+            ]
+        )
 
 
     def get_params(self): 
@@ -231,7 +221,6 @@ class OdometryNode(Node):
         self.BASE_LINK_OFFSET = self.get_parameter('base_link_offset').value
 
         self.DEBUG = self.get_parameter('debug').value
-
 
 
     def calculate_odometry(self): 
@@ -314,7 +303,6 @@ class OdometryNode(Node):
 
 
         if debug_mode or self.DEBUG: 
-
             node.get_logger().info(f'Position -> x: {self.x_pos} | y: {self.y_pos} | theta: {self.theta}')
             node.get_logger().info(f'Velocity -> x: {self.linear_vel_x} | y: {self.linear_vel_y} | theta: {self.angular_vel_theta}')
             node.get_logger().info(f'Ticks -> left: {self.left_wheels_ticks} | right: {self.right_wheels_ticks} \n')

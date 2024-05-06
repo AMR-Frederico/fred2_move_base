@@ -2,16 +2,16 @@
 
 import rclpy
 import threading
-import yaml
 import sys
-import os
+
 
 from typing import List, Optional
 
-from rclpy.node import Node
 from rclpy.context import Context 
-from rclpy.parameter import Parameter
+from rclpy.node import Node, ParameterDescriptor
+from rclpy.parameter import Parameter, ParameterType
 from rclpy.qos import QoSPresetProfiles, QoSProfile, QoSHistoryPolicy, QoSLivelinessPolicy, QoSReliabilityPolicy, QoSDurabilityPolicy
+
 
 from rcl_interfaces.msg import SetParametersResult
 from rcl_interfaces.srv import GetParameters
@@ -104,7 +104,7 @@ class JoyInterfaceNode(Node):
 
 
         # load params from the config file 
-        self.load_params(node_path, node_group)
+        self.load_params()
         self.get_params()
 
 
@@ -114,11 +114,27 @@ class JoyInterfaceNode(Node):
         self.last_joy_command_time = self.get_clock().now()
 
 
+    def load_params(self):
+        # Declare parameters for joystick and velocity limits, as well as debug settings
+        self.declare_parameters(
+            namespace='',
+            parameters=[
+                ('drift_analog_tolerance', None, ParameterDescriptor(description='Tolerance for analog drift in joystick', type=ParameterType.PARAMETER_INTEGER)),
+                ('max_value_controller', None, ParameterDescriptor(description='Maximum value for joystick controller', type=ParameterType.PARAMETER_INTEGER)),
+                ('max_vel_joy_angular', None, ParameterDescriptor(description='Maximum angular velocity from joystick', type=ParameterType.PARAMETER_DOUBLE)),
+                ('max_vel_joy_linear', None, ParameterDescriptor(description='Maximum linear velocity from joystick', type=ParameterType.PARAMETER_DOUBLE)),
+                ('debug', None, ParameterDescriptor(description='Enable debug prints for troubleshooting', type=ParameterType.PARAMETER_BOOL)),
+                ('unit_test', None, ParameterDescriptor(description='Enable unit testing mode', type=ParameterType.PARAMETER_BOOL))
+            ]
+        )
+
+        self.get_logger().info('All parameters successfully declared')
+
+
     def parameters_callback(self, params):
         
         for param in params:
             self.get_logger().info(f"Parameter '{param.name}' changed to: {param.value}")
-
 
 
         if param.name == 'max_vel_joy_linear':
@@ -135,35 +151,18 @@ class JoyInterfaceNode(Node):
 
         if param.name == 'drift_analog_tolerance': 
             self.DRIFT_ANALOG_TOLERANCE = param.value
-
-        
-        if param.name == 'debug': 
-            self.DEBUG = param.value
     
+
+        if param.name == 'debug': 
+            self.DEBUG = param.value 
+
+
+        if param.name == 'unit_test': 
+            self.UNIT_TEST = param.value 
 
 
         return SetParametersResult(successful=True)
     
-
-
-
-    def load_params(self, path, group): 
-        param_path = os.path.expanduser(path)
-
-        with open(param_path, 'r') as params_list: 
-            params = yaml.safe_load(params_list)
-        
-        # Get the params inside the specified group
-        params = params.get(group, {})
-
-        # Declare parameters with values from the YAML file
-        for param_name, param_value in params.items():
-            # Adjust parameter name to lowercase
-            param_name_lower = param_name.lower()
-            self.declare_parameter(param_name_lower, param_value)
-            self.get_logger().info(f'{param_name_lower}: {param_value}')
-
-
 
 
     def get_params(self):
@@ -172,19 +171,25 @@ class JoyInterfaceNode(Node):
         self.MAX_VEL_JOY_ANGULAR = self.get_parameter('max_vel_joy_angular').value
         self.MAX_VALUE_CONTROLLER = self.get_parameter('max_value_controller').value
         self.DRIFT_ANALOG_TOLERANCE = self.get_parameter('drift_analog_tolerance').value
-
+        self.UNIT_TEST = self.get_parameter('unit_test').value
         self.DEBUG = self.get_parameter('debug').value
 
-        # Get global params 
 
-        self.client = self.create_client(GetParameters, '/machine_states/main_robot/get_parameters')
-        self.client.wait_for_service()
+        # Allows it to run without the machine states 
+        if self.UNIT_TEST: 
+            
+            self.manual_mode = True
+        
+        else: 
+            # Get global params 
+            self.client = self.create_client(GetParameters, '/machine_states/main_robot/get_parameters')
+            self.client.wait_for_service()
 
-        request = GetParameters.Request()
-        request.names = ['manual', 'autonomous', 'in_goal', 'mission_completed', 'emergency']
+            request = GetParameters.Request()
+            request.names = ['manual', 'autonomous', 'in_goal', 'mission_completed', 'emergency']
 
-        future = self.client.call_async(request)
-        future.add_done_callback(self.callback_global_param)
+            future = self.client.call_async(request)
+            future.add_done_callback(self.callback_global_param)
 
 
     
@@ -338,8 +343,8 @@ class JoyInterfaceNode(Node):
 
 
         
-        if debug_mode or self.DEBUG: 
-            
+        if debug_mode or self.DEBUG:
+             
             self.get_logger().info(f'Velocity -> linear:{vel_linear} | angular:{vel_angular}\n')
             self.get_logger().info(f'Reset odometry -> {self.reset_odom}')
             self.get_logger().info(f'Switch mode -> {self.switch_mode}')

@@ -3,63 +3,73 @@
 ########### LED MANAGER NODE
 ################################################################################################################
 
-led_manager:
+/move_base/led_manager:
+  ros__parameters:
+    
+    # Colors index for the led strip
+    black: 200                #000000
+    blue: 1                   #0000ff
+    cyan: 2                   #00A8FF
+    green: 3                  #00ff00
+    light_green: 100          #00fa9a
+    orange: 6                 #ffa500
+    pink: 4                   #ff0084
+    purple: 7                 #800080
+    red: 2                    #ff0000
+    yellow: 5                 #ffff00
+    white: 0                  #ffffff
+    
+    # Index for ghost and waypoints goals 
+    ghost_goal: 1
+    waypoint_goal: 0
 
-  white: 0          #ffffff
-  blue: 1           #0000ff
-  yellow: 5         #ffff00
-  pink: 4           #ff0084
-  green: 3          #00ff00
-  orange: 6         #ffa500
-  red: 2            #ff0000
-  black: 200        #000000
-  cyan: 200            #00A8FF
-  purple: 7         #800080 
-  light_green: 100      #00fa9a
+    # Debug / test
+    use_sim_time: false     # Use simulation test
+    debug: false            # Enable debug prints 
+    unit_test: true        # Allow the node runs isolated 
 
-  waypoint_goal: 0  # Goals points that the robot must signal
-  ghost_goal: 1 
-
-  debug: False
 
 
 ################################################################################################################ 
 ########### SAFE TWIST
 ################################################################################################################
 
-safe_twist: 
+/move_base/safe_twist:
+  ros__parameters:
 
-  safe_distance: 100.0    # distance in cm 
- 
-  motor_brake_factor: -1 
- 
-  max_linear_speed: 3.5  
-  max_angular_speed: 25.0
+    # Ultrasonic sensors 
+    disable_ultrasonics: true
+    safe_distance: 100.0              # Stopping distance when detecting an object 
 
-  disable_ultrasonics: true
+    # Velocity limits 
+    max_angular_speed: 20.0           
+    max_linear_speed: 2.5
+    motor_brake_factor: -1
 
-  debug: False
-
-  accel_iterator_factor: 0.7
-  accel_ramp_tolerence: 0.05
-
+    # Debug / test
+    use_sim_time: false               # Use simulation test
+    debug: false                      # Enable debug prints
 
 
 ################################################################################################################ 
 ########### JOY ESP INTERFACE
 ################################################################################################################
 
-joy_esp_interface: 
+/move_base/joy_esp_interface:
+  ros__parameters:
 
-  max_vel_joy_linear: 5 
-  max_vel_joy_angular: 10 
-  
-  max_value_controller: 127 
-  
-  drift_analog_tolerance: 20 
-
-  debug: False
-
+    # Joystick limits 
+    drift_analog_tolerance: 20
+    max_value_controller: 127
+    
+    # Velocity limits 
+    max_vel_joy_angular: 10.0
+    max_vel_joy_linear: 5.0
+    
+    # Debug / test
+    use_sim_time: false     # Use simulation test
+    debug: false            # Enable debug prints 
+    unit_test: true        # Allow the node runs isolated  
 
 
 
@@ -67,14 +77,19 @@ joy_esp_interface:
 ########### ODOMETRY
 ################################################################################################################
 
-odometry:
+/move_base/odometry:
+  ros__parameters:
 
-  wheels_track: 0.3800  # distance in meters 
-  wheels_radius: 0.075  # distance in meters 
-  ticks_per_revolution: 7200 # 2400 * 3
-  base_link_offset: 0.08 # distance (in meters) between the base_footprint and base_link 
-
-  debug: False
-
+    # Robots dimensions
+    base_link_offset: 0.08
+    wheels_radius: 0.075
+    wheels_track: 0.38
+    
+    # Enconder config 
+    ticks_per_revolution: 7200
+    
+    # Debug / test
+    use_sim_time: false     # Use simulation test
+    debug: false            # Enable debug prints 
 
   

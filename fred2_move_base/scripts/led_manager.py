@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 
 import rclpy
-import yaml
-import os
 import sys
 import threading
 
 from typing import Any, List, Optional
 
-from rclpy.parameter import Parameter
-from rclpy.node import Node
 from rclpy.time import Duration, Time
+from rclpy.node import Node, ParameterDescriptor
+from rclpy.parameter import Parameter, ParameterType
 from rclpy.qos import QoSPresetProfiles, QoSProfile, QoSHistoryPolicy, QoSLivelinessPolicy, QoSReliabilityPolicy, QoSDurabilityPolicy
 
 from rcl_interfaces.msg import Parameter, SetParametersResult
@@ -20,15 +18,9 @@ from std_msgs.msg import Bool, Int16, Float32
 from geometry_msgs.msg import PoseStamped, Pose2D
 
 
-# Parameters file (yaml)
-led_path = '/home/ubuntu/ros2_ws/src/fred2_move_base/config/move_base_params.yaml'
-led_group = 'led_manager'
-
 
 # Check for cli_args 
 debug_mode = '--debug' in sys.argv
-
-
 
 
 class led_manager(Node): 
@@ -108,7 +100,7 @@ class led_manager(Node):
 
 
         # Load parameters from YAML file
-        self.load_params(led_path, led_group)
+        self.load_params()
         self.get_colors()
         
 
@@ -197,6 +189,29 @@ class led_manager(Node):
 
 
 
+    def load_params(self):
+        # Declare parameters related to LED colors, goal indices, and debugging/testing
+        self.declare_parameters(
+            namespace='',
+            parameters=[
+                ('black', None, ParameterDescriptor(description='Color index for black', type=ParameterType.PARAMETER_INTEGER)),
+                ('blue', None, ParameterDescriptor(description='Color index for blue', type=ParameterType.PARAMETER_INTEGER)),
+                ('cyan', None, ParameterDescriptor(description='Color index for cyan', type=ParameterType.PARAMETER_INTEGER)),
+                ('green', None, ParameterDescriptor(description='Color index for green', type=ParameterType.PARAMETER_INTEGER)),
+                ('light_green', None, ParameterDescriptor(description='Color index for light green', type=ParameterType.PARAMETER_INTEGER)),
+                ('orange', None, ParameterDescriptor(description='Color index for orange', type=ParameterType.PARAMETER_INTEGER)),
+                ('pink', None, ParameterDescriptor(description='Color index for pink', type=ParameterType.PARAMETER_INTEGER)),
+                ('purple', None, ParameterDescriptor(description='Color index for purple', type=ParameterType.PARAMETER_INTEGER)),
+                ('red', None, ParameterDescriptor(description='Color index for red', type=ParameterType.PARAMETER_INTEGER)),
+                ('yellow', None, ParameterDescriptor(description='Color index for yellow', type=ParameterType.PARAMETER_INTEGER)),
+                ('white', None, ParameterDescriptor(description='Color index for white', type=ParameterType.PARAMETER_INTEGER)),
+                ('ghost_goal', None, ParameterDescriptor(description='Index for ghost goals', type=ParameterType.PARAMETER_INTEGER)),
+                ('waypoint_goal', None, ParameterDescriptor(description='Index for waypoint goals', type=ParameterType.PARAMETER_INTEGER)),
+                ('debug', None, ParameterDescriptor(description='Enable debug prints for troubleshooting', type=ParameterType.PARAMETER_BOOL)),
+                ('unit_test', None, ParameterDescriptor(description='Enable unit testing mode', type=ParameterType.PARAMETER_BOOL))
+            ]
+        )
+
 
 
     def parameters_callback(self, params):
@@ -259,6 +274,9 @@ class led_manager(Node):
         
         if param.name == 'debug': 
             self.DEBUG = param.value
+        
+        if param.name == 'unit_test': 
+            self.UNIT_TEST = param.value 
 
 
 
@@ -283,20 +301,23 @@ class led_manager(Node):
 
         self.WAYPOINT_GOAL = self.get_parameter('waypoint_goal').value
         self.GHOST_GOAL = self.get_parameter('ghost_goal').value
-
+        
+        self.UNIT_TEST = self.get_parameter('unit_test').value
         self.DEBUG = self.get_parameter('debug').value
 
-        
-        # Get global params 
 
-        self.client = self.create_client(GetParameters, '/machine_states/main_robot/get_parameters')
-        self.client.wait_for_service()
+            
+        if not self.UNIT_TEST:
+            # Get global params 
 
-        request = GetParameters.Request()
-        request.names = ['manual', 'autonomous', 'in_goal', 'mission_completed', 'emergency']
+            self.client = self.create_client(GetParameters, '/machine_states/main_robot/get_parameters')
+            self.client.wait_for_service()
 
-        future = self.client.call_async(request)
-        future.add_done_callback(self.callback_global_param)
+            request = GetParameters.Request()
+            request.names = ['manual', 'autonomous', 'in_goal', 'mission_completed', 'emergency']
+
+            future = self.client.call_async(request)
+            future.add_done_callback(self.callback_global_param)
 
 
     
@@ -327,23 +348,6 @@ class led_manager(Node):
             self.get_logger().warn("Service call failed %r" % (e,))
 
 
-
-
-    def load_params(self, path, group): 
-        param_path = os.path.expanduser(path)
-
-        with open(param_path, 'r') as params_list: 
-            params = yaml.safe_load(params_list)
-        
-        # Get the params inside the specified group
-        params = params.get(group, {})
-
-        # Declare parameters with values from the YAML file
-        for param_name, param_value in params.items():
-            # Adjust parameter name to lowercase
-            param_name_lower = param_name.lower()
-            self.declare_parameter(param_name_lower, param_value)
-            self.get_logger().info(f'{param_name_lower}: {param_value}')
 
 
 
