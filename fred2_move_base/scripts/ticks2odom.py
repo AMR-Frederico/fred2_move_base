@@ -25,31 +25,31 @@ from nav_msgs.msg import Odometry
 
 # Node execution arguments 
 debug_mode = '--debug' in sys.argv
-
 publish_tf = '--publish-tf' in sys.argv         # For robot localization isn't necessary publish the TF
+
 
 class OdometryNode(Node):
 
-    left_wheels_ticks = 0
-    right_wheels_ticks = 0
+    left_wheels_ticks = 0               # Number of ticks recorded by the left wheel encoder
+    right_wheels_ticks = 0              # Number of ticks recorded by the right wheel encoder
 
-    last_left_ticks = 0
-    last_right_ticks = 0
+    last_left_ticks = 0                 # Previous left wheel tick count
+    last_right_ticks = 0                # Previous right wheel tick count
 
-    x_pos = 0
-    y_pos = 0
+    x_pos = 0                           # Current x position of the robot
+    y_pos = 0                           # Current y position of the robot
 
-    theta = 0
-    heading_offset = 0
-    robot_heading = 0
+    theta = 0                           # Current orientation angle (yaw) of the robot
+    heading_offset = 0                  # Offset to adjust the robot's heading
+    robot_heading = 0                   # Current heading obtained from the IMU
 
-    delta_x = 0
-    delta_y = 0
-    delta_theta = 0
+    delta_x = 0                         # Change in x position since the last calculation
+    delta_y = 0                         # Change in y position since the last calculation
+    delta_theta = 0                     # Change in orientation angle since the last calculation
 
-    current_time = 0
+    current_time = 0                    # Current time
 
-    reset_odom = False
+    reset_odom = False                  # Flag indicating whether to reset odometry
 
     
     def __init__(self, 
@@ -72,27 +72,40 @@ class OdometryNode(Node):
                          start_parameter_services=start_parameter_services, 
                          parameter_overrides=parameter_overrides)
         
+        self.quality_protocol()
+        self.setup_params()
+        self.setup_publishers()
+        self.setup_subscribers()
 
-        # quality protocol -> the node must not lose any message 
-        qos_profile = QoSProfile(
-            reliability=QoSReliabilityPolicy.RELIABLE, 
-            durability= QoSDurabilityPolicy.VOLATILE,
-            history=QoSHistoryPolicy.KEEP_LAST, 
-            depth=10, 
-            liveliness=QoSLivelinessPolicy.AUTOMATIC
-            
+        self.last_time = self.get_clock().now()
+
+        self.odom_broadcaster = TransformBroadcaster(self)
+        # self.base_link_broadcaster = TransformBroadcaster(self)
+
+
+    def quality_protocol(self):
+
+        self.qos_profile = QoSProfile(
+            reliability=QoSReliabilityPolicy.RELIABLE,  # Set the reliability policy to RELIABLE, ensuring reliable message delivery
+            durability= QoSDurabilityPolicy.VOLATILE,   # Set the durability policy to VOLATILE, indicating messages are not stored persistently
+            history=QoSHistoryPolicy.KEEP_LAST,         # Set the history policy to KEEP_LAST, storing a limited number of past messages
+            depth=10,                                   # Set the depth of the history buffer to 10, specifying the number of stored past messages
+            liveliness=QoSLivelinessPolicy.AUTOMATIC    # Set the liveliness policy to AUTOMATIC, allowing automatic management of liveliness
         )
 
         # quality protocol -> the node must not lose any message 
-        qos_imu_profile = QoSProfile(
-            reliability=QoSReliabilityPolicy.BEST_EFFORT, 
-            durability= QoSDurabilityPolicy.VOLATILE,
-            history=QoSHistoryPolicy.KEEP_LAST, 
-            depth=10, 
-            liveliness=QoSLivelinessPolicy.AUTOMATIC
+        self.qos_imu_profile = QoSProfile(
+            reliability=QoSReliabilityPolicy.BEST_EFFORT,   # Set the reliability policy to BEST EFFORT, ensuring best efford message delivery
+            durability= QoSDurabilityPolicy.VOLATILE,       # Set the durability policy to VOLATILE, indicating messages are not stored persistently
+            history=QoSHistoryPolicy.KEEP_LAST,             # Set the history policy to KEEP_LAST, storing a limited number of past messages
+            depth=10,                                       # Set the depth of the history buffer to 10, specifying the number of stored past messages
+            liveliness=QoSLivelinessPolicy.AUTOMATIC        # Set the liveliness policy to AUTOMATIC, allowing automatic management of liveliness
             
         )
 
+    def setup_subscribers(self): 
+
+        # --------------- Encoders sensors (from the firmware)
         self.create_subscription(Int32, 
                                  '/power/status/distance/ticks/left', 
                                  self.ticksLeft_callback,
@@ -103,42 +116,35 @@ class OdometryNode(Node):
                                  self.ticksRight_callback, 
                                  10)
         
+        # --------------- IMU sensors (from the firmware)
         self.create_subscription(Imu, 
                                  '/sensor/orientation/imu', 
                                  self.heading_callback, 
-                                 qos_imu_profile)
+                                 self.qos_imu_profile)
         
+        # --------------- Request to reset the odometry
         self.create_subscription(Bool, 
                                  '/odom/reset', 
                                  self.odomReset_callback, 
-                                 qos_profile)
-        
+                                 self.qos_profile)
+    
+    def setup_publishers(self):
 
-        self.odom_pub = self.create_publisher(Odometry, '/odom', qos_profile)
+        self.odom_pub = self.create_publisher(Odometry, '/odom', self.qos_profile)
 
+
+    def setup_params(self):
 
         self.load_params()
-        self.get_params()
 
-
-        self.last_time = self.get_clock().now()
-        
-        
         self.add_on_set_parameters_callback(self.parameters_callback)
 
 
-        self.odom_broadcaster = TransformBroadcaster(self)
-        # self.base_link_broadcaster = TransformBroadcaster(self)
-
-
-
-
-
+    # Updates the parameters when they are changed by the command line
     def parameters_callback(self, params):
         
         for param in params:
             self.get_logger().info(f"Parameter '{param.name}' changed to: {param.value}")
-
 
 
         if param.name == 'wheels_track':
@@ -160,6 +166,13 @@ class OdometryNode(Node):
         if param.name == 'debug': 
             self.DEBUG = param.value
         
+
+        if param.name == 'frequency': 
+            self.FREQUENCY = param.value 
+
+        
+        if param.name == 'publish_odom_tf': 
+            self.PUBLISH_ODOM_TF = param.value 
 
 
         return SetParametersResult(successful=True)
@@ -200,25 +213,56 @@ class OdometryNode(Node):
 
 
     def load_params(self):
+
         # Declare parameters related to robot dimensions, encoder configuration, and debugging/testing
         self.declare_parameters(
             namespace='',
             parameters=[
-                ('base_link_offset', None, ParameterDescriptor(description='Offset of the base link from the ground in meters', type=ParameterType.PARAMETER_DOUBLE)),
-                ('wheels_radius', None, ParameterDescriptor(description='Radius of the wheels in meters', type=ParameterType.PARAMETER_DOUBLE)),
-                ('wheels_track', None, ParameterDescriptor(description='Distance between the centers of the left and right wheels in meters', type=ParameterType.PARAMETER_DOUBLE)),
-                ('ticks_per_revolution', None, ParameterDescriptor(description='Number of encoder ticks per revolution of the wheel', type=ParameterType.PARAMETER_INTEGER)),
-                ('debug', None, ParameterDescriptor(description='Enable debug prints for troubleshooting', type=ParameterType.PARAMETER_BOOL))
+                ('base_link_offset', None, 
+                    ParameterDescriptor(
+                        description='Offset of the base link from the ground in meters', 
+                        type=ParameterType.PARAMETER_DOUBLE)),
+
+                ('wheels_radius', None, 
+                    ParameterDescriptor(
+                        description='Radius of the wheels in meters', 
+                        type=ParameterType.PARAMETER_DOUBLE)),
+
+                ('wheels_track', None, 
+                    ParameterDescriptor(
+                        description='Distance between the centers of the left and right wheels in meters', 
+                        type=ParameterType.PARAMETER_DOUBLE)),
+
+                ('ticks_per_revolution', None, 
+                    ParameterDescriptor(
+                        description='Number of encoder ticks per revolution of the wheel', 
+                        type=ParameterType.PARAMETER_INTEGER)),
+
+                ('frequency', None, 
+                    ParameterDescriptor(
+                        description='Node frequency', 
+                        type=ParameterType.PARAMETER_INTEGER)),
+
+                ('publish_odom_tf', None, 
+                    ParameterDescriptor(
+                        description='Allows the node to publish odom tf ', 
+                        type=ParameterType.PARAMETER_BOOL)),
+
+                ('debug', None, 
+                    ParameterDescriptor(
+                        description='Enable debug prints for troubleshooting', 
+                        type=ParameterType.PARAMETER_BOOL)),
             ]
         )
-
-
-    def get_params(self): 
 
         self.WHEELS_TRACK = self.get_parameter('wheels_track').value 
         self.WHEELS_RADIUS = self.get_parameter('wheels_radius').value
         self.TICKS_PER_TURN = self.get_parameter('ticks_per_revolution').value
         self.BASE_LINK_OFFSET = self.get_parameter('base_link_offset').value
+
+        self.FREQUENCY = self.get_parameter('frequency').value 
+
+        self.PUBLISH_ODOM_TF = self.get_parameter('publish_odom_tf').value
 
         self.DEBUG = self.get_parameter('debug').value
 
@@ -290,7 +334,7 @@ class OdometryNode(Node):
         
 
 
-        if publish_tf:
+        if publish_tf or self.PUBLISH_ODOM_TF:
         
             self.odom_transform()
 
@@ -400,7 +444,7 @@ if __name__ == '__main__':
     thread = threading.Thread(target=rclpy.spin, args=(node,), daemon=True)
     thread.start()
 
-    rate = node.create_rate(10)
+    rate = node.create_rate(node.FREQUENCY)
 
     try: 
         while rclpy.ok(): 
