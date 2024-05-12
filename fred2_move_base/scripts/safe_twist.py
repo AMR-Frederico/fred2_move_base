@@ -83,7 +83,16 @@ class SafeTwistNode(Node):
         self.setup_subscribers()
         self.setup_publishers()
 
+
+        self.load_params()                                              # parameters initialization
+        self.add_on_set_parameters_callback(self.parameters_callback)   # updates the parameters when they are updated by the command line
         
+        
+        # time threshold
+        self.last_joy_connected = self.get_clock().now()
+        self.last_vel_command_time = self.get_clock().now()
+
+
 
     def quality_protocol(self):
 
@@ -98,7 +107,7 @@ class SafeTwistNode(Node):
 
     def setup_subscribers(self): 
 
-    # --------------- Ultrasonic sensors (from the firmware)
+        # --------------- Ultrasonic sensors (from the firmware)
         self.create_subscription(Int16, 
                                 '/sensor/range/ultrasonic/right', 
                                 self.rightUltrasonic_callback, 
@@ -182,16 +191,6 @@ class SafeTwistNode(Node):
                                                     '/joy/controller/connected', 
                                                     5)
 
-        #################################    Parameters       #########################################################################
-
-        self.load_params()                                              # parameters initialization
-        self.add_on_set_parameters_callback(self.parameters_callback)   # updates the parameters when they are updated by the command line
-        
-        
-        # time threshold
-        self.last_joy_connected = self.get_clock().now()
-        self.last_vel_command_time = self.get_clock().now()
-
 
 
 
@@ -233,6 +232,10 @@ class SafeTwistNode(Node):
         if param.name == 'disable_ultrasonics': 
             self.DISABLE_ULTRASONICS = param.value
         
+
+        if param.name == 'frequency': 
+            self.FREQUENCY = param.value 
+
 
         if param.name == 'debug': 
             self.DEBUG = param.value
@@ -289,10 +292,16 @@ class SafeTwistNode(Node):
                         description='Timeout duration (in nanoseconds) to reset the joy_connected status if no message is received within this time', 
                         type=ParameterType.PARAMETER_INTEGER)),
 
+                ('frequency', None, 
+                    ParameterDescriptor(
+                        description='Node frequency', 
+                        type=ParameterType.PARAMETER_INTEGER)),
+
                 ('debug', None, 
                     ParameterDescriptor(
                         description='Enable debug prints for troubleshooting', 
                         type=ParameterType.PARAMETER_BOOL))
+                
             ]
         )
 
@@ -309,6 +318,7 @@ class SafeTwistNode(Node):
         self.VEL_TIMEOUT = self.get_parameter('cmd_vel_timeout').value
 
         self.DEBUG = self.get_parameter('debug').value
+        self.FREQUENCY = self.get_parameter('frequency').value
 
 
     #################################    Joystick callbacks       #########################################################################
@@ -574,7 +584,7 @@ if __name__ == '__main__':
     thread = threading.Thread(target=rclpy.spin, args=(node,), daemon=True)
     thread.start()
 
-    rate = node.create_rate(7)
+    rate = node.create_rate(node.FREQUENCY)
 
     try: 
         while rclpy.ok(): 
