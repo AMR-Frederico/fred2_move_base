@@ -4,7 +4,9 @@ import rclpy
 import threading
 import sys
 
-import fred2_move_base.fred2_move_base
+import fred2_move_base.fred2_move_base.scripts.publishers as publishers
+import fred2_move_base.fred2_move_base.scripts.subscribers as subscribers
+import fred2_move_base.fred2_move_base.scripts.parameters as params 
 
 from typing import List, Optional
 
@@ -215,19 +217,10 @@ class SafeTwistNode(Node):
             self.get_logger().warn(f'Joy battery: {self.joy_battery}%')
             
         
-        
+        publishers.safe_publish(self)
 
 
         if debug_mode or self.DEBUG: 
-
-            self.get_logger().warn(f'Robot safety -> {self.robot_safety}')
-            self.get_logger().info(f'Emergency mode -> user comand abort: {self.user_abort_command} | collision detected: {self.stop_by_obstacle}')
-            self.get_logger().info(f'Emergency mode -> joy connected: {self.joy_connected} | ultrasonics disabled: {self.DISABLE_ULTRASONICS}')
-            self.get_logger().info(f'Ultrasonics -> left: {self.left_ultrasonic_distance} | right: {self.right_ultrasonic_distance} | Back: {self.back_ultrasonic_distance}')
-            self.get_logger().info(f'Robot velocity -> linear: {self.robot_vel.linear.x} | angular: {self.robot_vel.angular.z}')
-            self.get_logger().info(f'Velocity command -> linear: {self.cmd_vel.linear.x} | angular: {self.cmd_vel.angular.z} | braking_factor: {self.deceleration_factor}')
-            self.get_logger().info(f'Safe velocity command -> linear: {self.cmd_vel_safe.linear.x} | angular: {self.cmd_vel_safe.angular.z}\n')
-
 
 
 if __name__ == '__main__':
