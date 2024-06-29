@@ -4,25 +4,28 @@ import rclpy
 import sys
 import threading
 
+import fred2_move_base.scripts.debug as debug
+import fred2_move_base.scripts.subscribers as subscribers 
+import fred2_move_base.scripts.publishers as publishers
+import fred2_move_base.scripts.parameters as params  
+
 from typing import Any, List, Optional
 
-from rclpy.time import Duration, Time
-from rclpy.node import Node, ParameterDescriptor
-from rclpy.parameter import Parameter, ParameterType
-from rclpy.qos import QoSPresetProfiles, QoSProfile, QoSHistoryPolicy, QoSLivelinessPolicy, QoSReliabilityPolicy, QoSDurabilityPolicy
+from rclpy.time import Duration
+from rclpy.node import Node
+from rclpy.parameter import Parameter
 
-from rcl_interfaces.msg import Parameter, SetParametersResult
-from rcl_interfaces.srv import GetParameters
+from rcl_interfaces.msg import Parameter
 
-from std_msgs.msg import Bool, Int16, Float32
-from geometry_msgs.msg import PoseStamped, Pose2D
+from std_msgs.msg import Int16
+from geometry_msgs.msg import Pose2D
 
 
 # Check for cli_args 
 debug_mode = '--debug' in sys.argv
 
 
-class led_manager(Node): 
+class LedManagerNode(Node): 
 
     led_color = Int16()
     led_debug = Int16()
@@ -79,328 +82,19 @@ class led_manager(Node):
                          start_parameter_services=start_parameter_services, 
                          parameter_overrides=parameter_overrides)
 
-        self.quality_protocol()
-        self.setup_publishers()
-        self.setup_subscribers()
+        subscribers.led_config(self)
+        publishers.led_config(self)
+        params.led_config(self)
 
-        # Load parameters from YAML file
-        self.load_params()   
-        self.get_params()     
-        self.add_on_set_parameters_callback(self.parameters_callback) # updates the parameters when they are updated by the command line
+        self.add_on_set_parameters_callback(params.led_params_callback) # updates the parameters when they are updated by the command line
 
         self.start_time = self.get_clock().now()
 
-
-    def quality_protocol(self):
-
-        self.qos_profile = QoSProfile(
-            reliability=QoSReliabilityPolicy.RELIABLE,  # Set the reliability policy to RELIABLE, ensuring reliable message delivery
-            durability= QoSDurabilityPolicy.VOLATILE,   # Set the durability policy to VOLATILE, indicating messages are not stored persistently
-            history=QoSHistoryPolicy.KEEP_LAST,         # Set the history policy to KEEP_LAST, storing a limited number of past messages
-            depth=10,                                   # Set the depth of the history buffer to 10, specifying the number of stored past messages
-            liveliness=QoSLivelinessPolicy.AUTOMATIC    # Set the liveliness policy to AUTOMATIC, allowing automatic management of liveliness
-            
-        )
-
-    def setup_subscribers(self): 
-
-        # ---------------- For debug, indicates when the robot stops by a collision alert 
-        self.create_subscription(Bool,
-                                 '/safety/abort/collision_alert', 
-                                 self.collision_callback,
-                                 self.qos_profile )
-
-
-        # ---------------- For debug, indicates when the robot stops by the user command 
-        self.create_subscription(Bool, 
-                                 '/safety/abort/user_command',
-                                 self.manual_abort_callback,
-                                 self.qos_profile )
-        
-        # ---------------- For debug, indicates when the ultrasonics are disabled  
-        self.create_subscription(Bool, 
-                                 '/safety/ultrasonic/disabled', 
-                                 self.ultrasonicStatus_callback, 
-                                 self.qos_profile )
-        
-        # ---------------- For debug, indicates when the joystick isn't connected 
-        self.create_subscription(Bool, 
-                                 '/joy/controller/connected', 
-                                 self.joyConnected_callback, 
-                                 self.qos_profile )
-
-        # ---------------- Robot state 
-        self.create_subscription(Int16,
-                                 '/machine_states/robot_state',
-                                 self.robot_state_callback, 
-                                 self.qos_profile )
-        
-        # --------------- For debug indicates when the odometry is reseted 
-        self.create_subscription(Bool, 
-                                 '/odom/reset', 
-                                 self.odom_reset_callback, 
-                                 self.qos_profile)
-
-        # --------------- Enable the LED when the robot reaches the goal 
-        self.create_subscription(Bool, 
-                                 '/goal_manager/goal/sinalization', 
-                                 self.goal_sinalization, 
-                                 self.qos_profile)
-
-    def setup_publishers(self):
-
-        # --------------- Main colors and sinalization, like the ones for machine states and goal sinalization 
-        self.ledColor_pub = self.create_publisher(Int16, 
-                                                    '/cmd/led_strip/color', 
-                                                    self.qos_profile )
-        
-        # --------------- Additional coloers for debug 
-        self.ledDebug_pub = self.create_publisher(Int16, 
-                                                   '/cmd/led_strip/debug/color', 
-                                                   self.qos_profile )
-
-
-    # Declare parameters related to LED colors, goal indices, and debugging/testing
-    def load_params(self):
-        self.declare_parameters(
-            namespace='',
-            parameters=[
-                ('black', None, 
-                    ParameterDescriptor(
-                        description='Color index for black', 
-                        type=ParameterType.PARAMETER_INTEGER)),
-
-                ('blue', None, 
-                    ParameterDescriptor(
-                        description='Color index for blue', 
-                        type=ParameterType.PARAMETER_INTEGER)),
-
-                ('cyan', None, 
-                    ParameterDescriptor(
-                        description='Color index for cyan', 
-                        type=ParameterType.PARAMETER_INTEGER)),
-
-                ('green', None, 
-                    ParameterDescriptor(
-                        description='Color index for green', 
-                        type=ParameterType.PARAMETER_INTEGER)),
-
-                ('light_green', None, 
-                    ParameterDescriptor(
-                        description='Color index for light green', 
-                        type=ParameterType.PARAMETER_INTEGER)),
-
-                ('orange', None, 
-                    ParameterDescriptor(
-                        description='Color index for orange', 
-                        type=ParameterType.PARAMETER_INTEGER)),
-
-                ('pink', None, 
-                    ParameterDescriptor(
-                        description='Color index for pink', 
-                        type=ParameterType.PARAMETER_INTEGER)),
-
-                ('purple', None, 
-                    ParameterDescriptor(
-                        description='Color index for purple', 
-                        type=ParameterType.PARAMETER_INTEGER)),
-
-                ('red', None, 
-                    ParameterDescriptor(
-                        description='Color index for red', 
-                        type=ParameterType.PARAMETER_INTEGER)),
-
-                ('yellow', None, 
-                    ParameterDescriptor(
-                        description='Color index for yellow', 
-                        type=ParameterType.PARAMETER_INTEGER)),
-
-                ('white', None, 
-                    ParameterDescriptor(
-                        description='Color index for white', 
-                        type=ParameterType.PARAMETER_INTEGER)),
-               
-                ('frequency', None, 
-                    ParameterDescriptor(
-                        description='Node frequency', 
-                        type=ParameterType.PARAMETER_INTEGER)),
-
-                ('debug', None, 
-                    ParameterDescriptor(
-                        description='Enable debug prints for troubleshooting', 
-                        type=ParameterType.PARAMETER_BOOL)),
-
-                ('unit_test', None, 
-                    ParameterDescriptor(
-                        description='Enable unit testing mode', 
-                        type=ParameterType.PARAMETER_BOOL))
-            ]
-        )
-    
-    # Get the param values 
-    def get_params (self):
-
-        # Get index colors
-        self.WHITE = self.get_parameter('white').value
-        self.BLUE = self.get_parameter('blue').value
-        self.YELLOW = self.get_parameter('yellow').value
-        self.PINK = self.get_parameter('pink').value
-        self.ORANGE = self.get_parameter('orange').value 
-        self.RED = self.get_parameter('red').value
-        self.GREEN = self.get_parameter('green').value 
-        self.BLACK = self.get_parameter('black').value 
-        self.CYAN = self.get_parameter('cyan').value
-        self.PURPLE = self.get_parameter('purple').value
-        self.LIGHT_GREEN = self.get_parameter('light_green').value    
-        
-        self.UNIT_TEST = self.get_parameter('unit_test').value
-        self.DEBUG = self.get_parameter('debug').value
-        self.FREQUENCY = self.get_parameter('frequency').value 
-
-        if not self.UNIT_TEST:
-            # Get global params 
-
-            self.client = self.create_client(GetParameters, '/machine_states/main_robot/get_parameters')
-            self.client.wait_for_service()
-
-            request = GetParameters.Request()
-            request.names = ['manual', 'autonomous', 'in_goal', 'mission_completed', 'emergency']
-
-            future = self.client.call_async(request)
-            future.add_done_callback(self.callback_global_param)
-
-
-
-    def parameters_callback(self, params):
-        
-        for param in params:
-            self.get_logger().info(f"Parameter '{param.name}' changed to: {param.value}")
-
-
-        if param.name == 'white':
-            self.WHITE = param.value
-    
-  
-        if param.name == 'blue':
-            self.BLUE = param.value
-
-
-        if param.name == 'yellow': 
-            self.YELLOW = param.value
-
-
-        if param.name == 'pink': 
-            self.PINK = param.value
-        
-
-        if param.name == 'orange': 
-            self.ORANGE = param.value
-
-
-        if param.name == 'red': 
-            self.RED = param.value
-
-
-        if param.name == 'green': 
-            self.GREEN = param.value
-
-
-        if param.name == 'black': 
-            self.BLACK = param.value
-
-
-        if param.name == 'cyan': 
-            self.CYAN = param.value
-
-
-        if param.name == 'purple': 
-            self.PURPLE = param.value    
-
-
-        if param.name == 'light_green': 
-            self.LIGHT_GREEN = param.value        
-
-        
-        if param.name == 'debug': 
-            self.DEBUG = param.value
-
-        
-        if param.name == 'unit_test': 
-            self.UNIT_TEST = param.value 
-        
-        if param.name == 'frequency': 
-            self.FREQUENCY = param.value 
-
-
-
-        return SetParametersResult(successful=True)
-        
-        
-
-    
-    def callback_global_param(self, future):
-
-
-        try:
-
-            result = future.result()
-
-            self.ROBOT_MANUAL = result.values[0].integer_value
-            self.ROBOT_AUTONOMOUS = result.values[1].integer_value
-            self.ROBOT_IN_GOAL = result.values[2].integer_value
-            self.ROBOT_MISSION_COMPLETED = result.values[3].integer_value
-            self.ROBOT_EMERGENCY = result.values[4].integer_value
-
-
-            self.get_logger().info(f"Got global param ROBOT_MANUAL -> {self.ROBOT_MANUAL}")
-            self.get_logger().info(f"Got global param ROBOT_AUTONOMOUS -> {self.ROBOT_AUTONOMOUS}")
-            self.get_logger().info(f"Got global param ROBOT_IN GOAL -> {self.ROBOT_IN_GOAL}")
-            self.get_logger().info(f"Got global param ROBOT_MISSION_COMPLETED: {self.ROBOT_MISSION_COMPLETED}")
-            self.get_logger().info(f"Got global param ROBOT_EMERGENCY: {self.ROBOT_EMERGENCY}\n")
-
-
-
-        except Exception as e:
-
-            self.get_logger().warn("Service call failed %r" % (e,))
-
-
-
-
-
-    # Imminent collision detected by the ultrasonic sensors 
-    def collision_callback(self, msg):
-
-        self.collision_detected = msg.data
-
-
-
-    # Manual stop command send by the joystick 
-    def manual_abort_callback(self, msg): 
-
-        self.user_stop_command = msg.data
-
-
-
-    # Signal if the ultrasonics are disabled 
-    def ultrasonicStatus_callback(self, msg): 
-
-        if msg.data: 
-
-            self.ultrasonic_disabled = True
-        
-        else: 
-
-            self.ultrasonic_disabled = False
-
-
-    # Request from the goal manager to enable the led strip when the robot reaches a goal 
-    def goal_sinalization(self, msg): 
-
-        self.led_sinalization = msg.data
+   
+    def goal_sinalization(self): 
 
         if self.led_sinalization: 
-                     
+                        
             self.led_goal_reached = True
 
             self.get_logger().warn('ROBOT IN GOAL')
@@ -412,26 +106,6 @@ class led_manager(Node):
         if (self.get_clock().now() - self.start_time) > self.LED_ON_TIME: 
             
             self.led_goal_reached = False 
-        
-
-
-
-    # Current robot state
-    def robot_state_callback(self, msg): 
-        
-        self.robot_state = msg.data
-
-
-    # Connection status from the joystick 
-    def joyConnected_callback(self, msg): 
-        
-        self.joy_connected = msg.data
-
-
-    # Odom reset request 
-    def odom_reset_callback(self, msg): 
-        
-        self.odom_reset = msg.data
 
 
         
@@ -522,7 +196,7 @@ if __name__ == '__main__':
     
     rclpy.init()
 
-    node = led_manager(
+    node = LedManagerNode(
         'led_manager', 
         namespace='move_base',
         cli_args=['--debug'],

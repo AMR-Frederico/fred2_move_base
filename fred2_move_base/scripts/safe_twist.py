@@ -4,9 +4,10 @@ import rclpy
 import threading
 import sys
 
-import fred2_move_base.fred2_move_base.scripts.publishers as publishers
-import fred2_move_base.fred2_move_base.scripts.subscribers as subscribers
-import fred2_move_base.fred2_move_base.scripts.parameters as params 
+import fred2_move_base.scripts.publishers as publishers
+import fred2_move_base.scripts.subscribers as subscribers
+import fred2_move_base.scripts.parameters as params 
+import fred2_move_base.scripts.debug as debug 
 
 from typing import List, Optional
 
@@ -78,14 +79,12 @@ class SafeTwistNode(Node):
                         start_parameter_services=start_parameter_services, 
                         parameter_overrides=parameter_overrides)
     
+        # parameters initialization
+        subscribers.safe_config(self)
+        publishers.safe_config(self)
+        params.safe_twist(self)
 
-        self.quality_protocol() 
-        self.setup_subscribers()
-        self.setup_publishers()
-
-
-        self.load_params()                                              # parameters initialization
-        self.add_on_set_parameters_callback(self.parameters_callback)   # updates the parameters when they are updated by the command line
+        self.add_on_set_parameters_callback(params.safe_params_callback)   # updates the parameters when they are updated by the command line
         
         
         # time threshold
@@ -129,6 +128,24 @@ class SafeTwistNode(Node):
 
                 self.deceleration_factor = 0
 
+
+
+    def abort_command(self): 
+
+        if (self.abort_flag > self.abort_previous_flag): 
+
+            self.user_abort_command = not self.user_abort_command
+
+
+        self.abort_previous_flag = self.abort_flag
+        
+        # Stop Motor
+        if self.user_abort_command: 
+            
+            self.get_logger().warn('User STOP command -> Stopping the robot')
+
+            self.cmd_vel_safe.linear.x = self.robot_vel.linear.x * self.MOTOR_BRAKE_FACTOR
+            self.cmd_vel_safe.angular.z = self.robot_vel.angular.z * self.MOTOR_BRAKE_FACTOR
 
 
 
@@ -221,6 +238,9 @@ class SafeTwistNode(Node):
 
 
         if debug_mode or self.DEBUG: 
+
+            debug.safe_twist(self)
+
 
 
 if __name__ == '__main__':

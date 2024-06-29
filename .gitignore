@@ -3,3 +3,7 @@ log/COLCON_IGNORE
 log/latest
 log/latest_list
 log/list_2024-01-29_21-01-40/logger_all.log
+fred2_move_base/scripts/__pycache__/debug.cpython-310.pyc
+fred2_move_base/scripts/__pycache__/parameters.cpython-310.pyc
+fred2_move_base/scripts/__pycache__/publishers.cpython-310.pyc
+fred2_move_base/scripts/__pycache__/subscribers.cpython-310.pyc

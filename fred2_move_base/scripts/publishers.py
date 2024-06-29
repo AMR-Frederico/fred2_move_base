@@ -1,14 +1,16 @@
-import fred2_move_base.fred2_move_base.scripts.qos as qos 
+import fred2_move_base.scripts.qos as qos 
 
 from rclpy.node import Node
 
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, Int16
 from geometry_msgs.msg import Twist
+from nav_msgs.msg import Odometry
 
+commum_qos = qos.general_configuration()
 
 def safe_config(node: Node):
 
-    commum_qos = qos.general_configuration()
+    global commum_qos
 
 
     # ---------------- Safe velocity for the robot 
@@ -40,7 +42,64 @@ def safe_config(node: Node):
     node.joyConnect_pub = node.create_publisher(Bool, 
                                                 '/joy/controller/connected', 
                                                 5)
+
+
+
+########################################################
+# --------------- ODOMETRY
+########################################################
+
+
+def odometry_config(node: Node):
+
+    global commum_qos
+
+    node.odom_pub = node.create_publisher(Odometry, '/odom', commum_qos)
+
+
+
+########################################################
+# --------------- LED MANAGER 
+########################################################
+
+
+def led_config(node: Node):
+
+    global commum_qos
+
+    # --------------- Main colors and sinalization, like the ones for machine states and goal sinalization 
+    node.ledColor_pub = node.create_publisher(Int16, 
+                                                '/cmd/led_strip/color', 
+                                                 commum_qos)
     
+    # --------------- Additional coloers for debug 
+    node.ledDebug_pub = node.create_publisher(Int16, 
+                                                '/cmd/led_strip/debug/color', 
+                                                 commum_qos)
+
+
+########################################################
+# --------------- LED MANAGER 
+########################################################
+
+
+def joy_config(node: Node): 
+
+    global commum_qos
+
+    # --------- Velocity command 
+    node.vel_pub = node.create_publisher(Twist, '/cmd_vel', commum_qos)      
+
+    # --------- Request for reset the odometry 
+    node.resetOdom_pub = node.create_publisher(Bool, '/odom/reset', commum_qos)
+
+    # --------- Swicht between Manuel and Autonomous mode  
+    node.switchMode_pub = node.create_publisher(Bool, '/joy/machine_states/switch_mode', commum_qos) 
+
+
+
+
+
 
 def safe_publish(node: Node): 
 

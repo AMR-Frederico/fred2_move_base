@@ -4,20 +4,19 @@ import rclpy
 import threading
 import sys
 
-from typing import List, Optional
+import fred2_move_base.scripts.debug as debug
+import fred2_move_base.scripts.parameters as params 
+import fred2_move_base.scripts.publishers as publishers 
+import fred2_move_base.scripts.subscribers as subscribers 
+
+from typing import List
 
 from rclpy.context import Context 
-from rclpy.node import Node, ParameterDescriptor
-from rclpy.parameter import Parameter, ParameterType
-from rclpy.qos import QoSPresetProfiles, QoSProfile, QoSHistoryPolicy, QoSLivelinessPolicy, QoSReliabilityPolicy, QoSDurabilityPolicy
+from rclpy.node import Node
+from rclpy.parameter import Parameter
 
-
-from rcl_interfaces.msg import SetParametersResult
-from rcl_interfaces.srv import GetParameters
-
-from std_msgs.msg import Int16, Bool
+from std_msgs.msg import Bool
 from geometry_msgs.msg import Twist
-from sensor_msgs.msg import Joy
 
 
 # Check for cli_args 
@@ -67,219 +66,24 @@ class JoyInterfaceNode(Node):
                          start_parameter_services=start_parameter_services, 
                          parameter_overrides=parameter_overrides)
     
-        self.quality_protocol()
-        self.setup_publishers()
-        self.setup_subscribers()
+        subscribers.joy_config(self)
+        publishers.joy_config(self)
+        params.joy_config(self)
 
-        # load params from the config file 
-        self.load_params()
-        self.get_params()
 
-        self.add_on_set_parameters_callback(self.parameters_callback)
+        self.add_on_set_parameters_callback(params.joy_params_callback)
 
         
         self.last_joy_command_time = self.get_clock().now()
-    
-
-    def quality_protocol(self):
-
-        self.qos_profile = QoSProfile(
-            reliability=QoSReliabilityPolicy.RELIABLE,  # Set the reliability policy to RELIABLE, ensuring reliable message delivery
-            durability= QoSDurabilityPolicy.VOLATILE,   # Set the durability policy to VOLATILE, indicating messages are not stored persistently
-            history=QoSHistoryPolicy.KEEP_LAST,         # Set the history policy to KEEP_LAST, storing a limited number of past messages
-            depth=10,                                   # Set the depth of the history buffer to 10, specifying the number of stored past messages
-            liveliness=QoSLivelinessPolicy.AUTOMATIC    # Set the liveliness policy to AUTOMATIC, allowing automatic management of liveliness
-            
-        )
-
-    def setup_subscribers(self): 
-
-        # -------- Get joytstick commands from firmware
-        self.create_subscription(Joy, 
-                                 '/joy/controller/ps4', 
-                                 self.joy_callback, 
-                                 10)
-        
-
-        # -------- Get robot states 
-        self.create_subscription(Int16, 
-                                 '/machine_states/robot_state', 
-                                 self.manualMode_callback, 
-                                 self.qos_profile)
-
-
-    def setup_publishers(self): 
-
-        # --------- Velocity command 
-        self.vel_pub = self.create_publisher(Twist, '/cmd_vel', self.qos_profile)      
-
-        # --------- Request for reset the odometry 
-        self.resetOdom_pub = self.create_publisher(Bool, '/odom/reset', self.qos_profile)
-
-        # --------- Swicht between Manuel and Autonomous mode  
-        self.switchMode_pub = self.create_publisher(Bool, '/joy/machine_states/switch_mode', self.qos_profile) 
-
-
-
-
-    def load_params(self):
-        # Declare parameters for joystick and velocity limits, as well as debug settings
-        self.declare_parameters(
-            namespace='',
-            parameters=[
-                ('drift_analog_tolerance', None, 
-                    ParameterDescriptor(
-                        description='Tolerance for analog drift in joystick', 
-                        type=ParameterType.PARAMETER_INTEGER)),
-
-                ('max_value_controller', None, 
-                    ParameterDescriptor(
-                        description='Maximum value for joystick controller', 
-                        type=ParameterType.PARAMETER_INTEGER)),
-
-                ('max_vel_joy_angular', None, 
-                    ParameterDescriptor(
-                        description='Maximum angular velocity from joystick', 
-                        type=ParameterType.PARAMETER_DOUBLE)),
-
-                ('max_vel_joy_linear', None, 
-                    ParameterDescriptor(
-                        description='Maximum linear velocity from joystick', 
-                        type=ParameterType.PARAMETER_DOUBLE)),
-
-                ('debug', None, 
-                    ParameterDescriptor(
-                        description='Enable debug prints for troubleshooting',
-                        type=ParameterType.PARAMETER_BOOL)),
-                        
-                ('unit_test', None, 
-                    ParameterDescriptor(
-                        description='Enable unit testing mode', 
-                        type=ParameterType.PARAMETER_BOOL)),
-                
-                ('frequency', None, 
-                    ParameterDescriptor(
-                        description='Node frequency', 
-                        type=ParameterType.PARAMETER_INTEGER)),
-
-                ('joy_cmd_timeout', None, 
-                    ParameterDescriptor(
-                        description='Timeout duration (in nanoseconds) to reset the joy_cmd status if no message is received within this time.', 
-                        type=ParameterType.PARAMETER_INTEGER)),
-            ]
-        )
-
-        self.get_logger().info('All parameters successfully declared')
-
-
-    # updates the parameters when they are changed by the command line
-    def parameters_callback(self, params):
-        
-        for param in params:
-            self.get_logger().info(f"Parameter '{param.name}' changed to: {param.value}")
-
-
-        if param.name == 'max_vel_joy_linear':
-            self.MAX_VEL_JOY_LINEAR = param.value
-    
-  
-        if param.name == 'max_vel_joy_angular':
-            self.MAX_VEL_JOY_ANGULAR = param.value
-
-
-        if param.name == 'max_value_controller': 
-            self.MAX_VALUE_CONTROLLER = param.value
-
-
-        if param.name == 'drift_analog_tolerance': 
-            self.DRIFT_ANALOG_TOLERANCE = param.value
-    
-
-        if param.name == 'debug': 
-            self.DEBUG = param.value 
-
-
-        if param.name == 'unit_test': 
-            self.UNIT_TEST = param.value 
-        
-
-        if param.name == 'frequency': 
-            self.FREQUENCY = param.value 
-
-
-        if param.name == 'joy_cmd_timeout': 
-            self.JOY_TIMEOUT = param.value
-
-
-        return SetParametersResult(successful=True)
-    
-
-    # get the params value 
-    def get_params(self):
-
-        self.MAX_VEL_JOY_LINEAR = self.get_parameter('max_vel_joy_linear').value
-        self.MAX_VEL_JOY_ANGULAR = self.get_parameter('max_vel_joy_angular').value
-
-        self.MAX_VALUE_CONTROLLER = self.get_parameter('max_value_controller').value
-        self.DRIFT_ANALOG_TOLERANCE = self.get_parameter('drift_analog_tolerance').value
-        self.JOY_TIMEOUT = self.get_parameter('joy_cmd_timeout').value 
-
-        self.FREQUENCY = self.get_parameter('frequency').value
-        self.UNIT_TEST = self.get_parameter('unit_test').value
-        self.DEBUG = self.get_parameter('debug').value
-
-
-        # Allows it to run without the machine states 
-        if self.UNIT_TEST: 
-            
-            self.manual_mode = True
-        
-        else: 
-            # Get global params 
-            self.client = self.create_client(GetParameters, '/machine_states/main_robot/get_parameters')
-            self.client.wait_for_service()
-
-            request = GetParameters.Request()
-            request.names = ['manual', 'autonomous', 'in_goal', 'mission_completed', 'emergency']
-
-            future = self.client.call_async(request)
-            future.add_done_callback(self.callback_global_param)
 
 
     
-    def callback_global_param(self, future):
-
-
-        try:
-
-            result = future.result()
-
-            self.ROBOT_MANUAL = result.values[0].integer_value
-            self.ROBOT_AUTONOMOUS = result.values[1].integer_value
-            self.ROBOT_IN_GOAL = result.values[2].integer_value
-            self.ROBOT_MISSION_COMPLETED = result.values[3].integer_value
-            self.ROBOT_EMERGENCY = result.values[4].integer_value
-
-
-            self.get_logger().info(f"\nGot global param ROBOT_MANUAL -> {self.ROBOT_MANUAL}")
-            self.get_logger().info(f"Got global param ROBOT_AUTONOMOUS -> {self.ROBOT_AUTONOMOUS}")
-            self.get_logger().info(f"Got global param ROBOT_IN GOAL -> {self.ROBOT_IN_GOAL}")
-            self.get_logger().info(f"Got global param ROBOT_MISSION_COMPLETED: {self.ROBOT_MISSION_COMPLETED}")
-            self.get_logger().info(f"Got global param ROBOT_EMERGENCY: {self.ROBOT_EMERGENCY}\n")
-
-
-        except Exception as e:
-
-            self.get_logger().warn("Service call failed %r" % (e,))
-
-
-
-    def joy_callback(self, joy_msg): 
+    def joy_command(self):
  
         # Process linear velocity command from joystick analog input
-        if abs(joy_msg.axes[0]) > self.DRIFT_ANALOG_TOLERANCE: 
+        if abs(self.joy_msg.axes[0]) > self.DRIFT_ANALOG_TOLERANCE: 
 
-            self.joy_vel_linear = joy_msg.axes[0]
+            self.joy_vel_linear = self.joy_msg.axes[0]
 
         else: 
 
@@ -287,9 +91,9 @@ class JoyInterfaceNode(Node):
 
 
         # Process angular velocity command from joystick analog input
-        if abs(joy_msg.axes[2]) > self.DRIFT_ANALOG_TOLERANCE: 
+        if abs(self.joy_msg.axes[2]) > self.DRIFT_ANALOG_TOLERANCE: 
 
-            self.joy_vel_angular = joy_msg.axes[2]      
+            self.joy_vel_angular = self.joy_msg.axes[2]      
 
         else: 
 
@@ -298,8 +102,8 @@ class JoyInterfaceNode(Node):
 
 
         # Process button commands
-        reset_button = joy_msg.buttons[1]               # CIRCLE -> Button for resetting odometry
-        switch_button = joy_msg.buttons[2]              # TRIANGLE -> Button for switching mode
+        reset_button = self.joy_msg.buttons[1]               # CIRCLE -> Button for resetting odometry
+        switch_button = self.joy_msg.buttons[2]              # TRIANGLE -> Button for switching mode
     
 
          # Check if reset button is pressed
@@ -350,15 +154,7 @@ class JoyInterfaceNode(Node):
         # reset the state of the main machine states, for the initial one 
         reset_msg = Bool()
         reset_msg.data = status
-        self.resetOdom_pub.publish(reset_msg)
-
-    
-    # Checks if the robot is in the manuel mode 
-    def manualMode_callback(self, msg):
-
-        robot_state = msg.data
-        self.manual_mode = (robot_state == self.ROBOT_MANUAL)
-        
+        self.resetOdom_pub.publish(reset_msg)        
     
 
     def main(self): 
