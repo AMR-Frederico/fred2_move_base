@@ -338,7 +338,7 @@ def led_config(node: Node):
 
     if node.GLOBAL_PARAMS:
 
-        get_global_params(node)
+        global_params(node)
 
 
 
@@ -481,7 +481,7 @@ def joy_config(node: Node):
     # Allows it to run without the machine states 
     if node.GLOBAL_PARAMS: 
         
-        get_global_params(node)
+        global_params(node)
 
 
 # updates the parameters when they are changed by the command line
@@ -532,45 +532,44 @@ def joy_params_callback(self, params):
 ########################################################
 
 
-def get_global_params(node: Node): 
-        # Get global params 
+def global_params(node: Node): 
 
-        node.client = node.create_client(GetParameters, '/machine_states/main_robot/get_parameters')
-        node.client.wait_for_service()
+    # Get global params 
+    node.client = node.create_client(GetParameters, '/main_robot/operation_modes/get_parameters')
+    node.client.wait_for_service()
 
-        request = GetParameters.Request()
-        request.names = ['manual', 'autonomous', 'in_goal', 'mission_completed', 'emergency']
+    request = GetParameters.Request()
+    request.names = ['init', 'manual', 'autonomous', 'emergency']
 
-        future = node.client.call_async(request)
-        future.add_done_callback(node.callback_global_param)
-
-
+    future = node.client.call_async(request)
+    future.add_done_callback(lambda future: callback_global_param(node, future))
 
 
-    
-def callback_global_param(self, future):
+    node.get_logger().info('Global params are deactivated')  
+        
+
+
+# get the global values from the machine states params 
+def callback_global_param(node: Node, future):
 
 
     try:
 
         result = future.result()
 
-        self.ROBOT_MANUAL = result.values[0].integer_value
-        self.ROBOT_AUTONOMOUS = result.values[1].integer_value
-        self.ROBOT_IN_GOAL = result.values[2].integer_value
-        self.ROBOT_MISSION_COMPLETED = result.values[3].integer_value
-        self.ROBOT_EMERGENCY = result.values[4].integer_value
+        node.ROBOT_INIT = result.values[0].integer_value
+        node.ROBOT_MANUAL = result.values[1].integer_value
+        node.ROBOT_AUTONOMOUS = result.values[2].integer_value
+        node.ROBOT_EMERGENCY = result.values[3].integer_value
 
-
-        self.get_logger().info(f"Got global param ROBOT_MANUAL -> {self.ROBOT_MANUAL}")
-        self.get_logger().info(f"Got global param ROBOT_AUTONOMOUS -> {self.ROBOT_AUTONOMOUS}")
-        self.get_logger().info(f"Got global param ROBOT_IN GOAL -> {self.ROBOT_IN_GOAL}")
-        self.get_logger().info(f"Got global param ROBOT_MISSION_COMPLETED: {self.ROBOT_MISSION_COMPLETED}")
-        self.get_logger().info(f"Got global param ROBOT_EMERGENCY: {self.ROBOT_EMERGENCY}\n")
+        node.get_logger().info(f"Got global param ROBOT_EMERGENCY: {node.ROBOT_EMERGENCY}\n")
+        node.get_logger().info(f"Got global param ROBOT_INIT -> {node.ROBOT_INIT}")
+        node.get_logger().info(f"Got global param ROBOT_MANUAL -> {node.ROBOT_MANUAL}")
+        node.get_logger().info(f"Got global param ROBOT_AUTONOMOUS -> {node.ROBOT_AUTONOMOUS}")
 
 
 
     except Exception as e:
 
-        self.get_logger().warn("Service call failed %r" % (e,))
+        node.get_logger().warn("Service call failed %r" % (e,))
 

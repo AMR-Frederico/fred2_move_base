@@ -59,8 +59,7 @@ class LedManagerNode(Node):
     # starts with randon value 
     ROBOT_MANUAL = 1000
     ROBOT_AUTONOMOUS = 1000
-    ROBOT_IN_GOAL = 1000
-    ROBOT_MISSION_COMPLETED = 1000
+    ROBOT_INIT = 1000
     ROBOT_EMERGENCY = 1000
 
     
