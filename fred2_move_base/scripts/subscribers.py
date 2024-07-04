@@ -170,7 +170,10 @@ def led_config(node: Node):
                                 commum_qos_profile)
 
 
-
+    node.create_subscription(Int16, 
+                            '/main_robot/autonomous_state',
+                             lambda msg: autonomousMachine_callback(node, msg),
+                              commum_qos_profile )
 
 ########################################################
 # --------------- JOY ESP INTERFACE 
@@ -346,6 +349,10 @@ def joy_callback(node: Node, msg):
 
     node.joy_msg = msg
 
-    print(msg)
-
     JoyInterfaceNode.joy_command(node)
+
+
+
+def autonomousMachine_callback(node: Node, msg): 
+
+    node.autonomous_state = msg.data
