@@ -32,7 +32,7 @@ class LedManagerNode(Node):
     
 
     robot_state = -5                # Current state of the robot, initialized to a random value
-
+    autonomous_state = 0
 
     user_stop_command = True        # Flag indicating whether a stop command is issued by the user
     collision_detected = False      # Flag indicating whether a collision is detected
@@ -61,6 +61,8 @@ class LedManagerNode(Node):
     ROBOT_AUTONOMOUS = 1000
     ROBOT_INIT = 1000
     ROBOT_EMERGENCY = 1000
+
+    MISSION_ACCOMPLISHED = 40
 
     
     def __init__(self, 
@@ -132,7 +134,7 @@ class LedManagerNode(Node):
 
 
 
-            if self.robot_state == self.ROBOT_MISSION_COMPLETED:
+            if self.autonomous_state == self.MISSION_ACCOMPLISHED:
 
                 self.led_color.data = self.YELLOW
 
