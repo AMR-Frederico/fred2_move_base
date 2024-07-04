@@ -159,14 +159,14 @@ class SafeTwistNode(Node):
             current_time = self.get_clock().now()
 
             # Reset joy_connected status if no message received within the joystick timeout
-            if (current_time - self.last_joy_connected).nanoseconds > 1e5 and self.JOY_TIMEOUT: 
+            # if (current_time - self.last_joy_connected).nanoseconds > e5 and self.JOY_TIMEOUT: 
 
-                self.joy_connected = False
-                self.get_logger().warn('Joy connection set to FALSE due to a timeout (no message received within the last 1 and half second).')
+            #     self.joy_connected = False
+            #     self.get_logger().warn('Joy connection set to FALSE due to a timeout (no message received within the last 1 and half second).')
 
-                joy_status_msg = Bool()
-                joy_status_msg.data = False
-                self.joyConnect_pub.publish(joy_status_msg)
+            #     joy_status_msg = Bool()
+            #     joy_status_msg.data = False
+            #     self.joyConnect_pub.publish(joy_status_msg)
 
             
             # Reset joy_connected status if no message received within the vel timeout
@@ -196,15 +196,15 @@ class SafeTwistNode(Node):
             if self.stop_by_obstacle or not self.joy_connected: 
                 
                 # Apply braking factor, to immediately stops the robot, if obstacle detected or joy not connected
-                self.cmd_vel_safe.linear.x = self.linear.x * self.MOTOR_BRAKE_FACTOR
+                self.cmd_vel_safe.linear.x = self.robot_vel.linear.x * self.MOTOR_BRAKE_FACTOR
                 self.cmd_vel_safe.angular.z = self.robot_vel.angular.z * self.MOTOR_BRAKE_FACTOR
 
 
 
             else: 
                 # Apply deceleration factor otherwise
-                self.cmd_vel_safe.linear.x = self.cmd_vel.linear.x * self.DECELERATION_FACTOR
-                self.cmd_vel_safe.angular.z = self.cmd_vel.angular.z * self.DECELERATION_FACTOR
+                self.cmd_vel_safe.linear.x = self.cmd_vel.linear.x * self.deceleration_factor
+                self.cmd_vel_safe.angular.z = self.cmd_vel.angular.z * self.deceleration_factor
 
 
 
