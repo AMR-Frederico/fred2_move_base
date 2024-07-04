@@ -14,8 +14,13 @@ def safe_config(node: Node):
 
 
     # ---------------- Safe velocity for the robot 
-    node.safeVel_pub = node.create_publisher(Twist, 
-                                            '/cmd_vel/safe', 
+    node.safeBackVel_pub = node.create_publisher(Twist, 
+                                            '/esp_back/cmd_vel/safe', 
+                                            commum_qos)
+
+    # ---------------- Safe velocity for the robot 
+    node.safeFrontVel_pub = node.create_publisher(Twist, 
+                                            '/esp_front/cmd_vel/safe', 
                                             commum_qos)
 
     # ---------------- For debug, indicates when the robot stops by the user command 
@@ -113,7 +118,8 @@ def safe_publish(node: Node):
 
     #################################    Publishers       #########################################################################
 
-    node.safeVel_pub.publish(node.cmd_vel_safe)
+    node.safeBackVel_pub.publish(node.cmd_vel_safe)
+    node.safeFrontVel_pub.publish(node.cmd_vel_safe)
     node.userStop_pub.publish(node.userStop_msg)
     node.robotSafety_pub.publish(node.robotSafety_msg)
     node.collisionDetection_pub.publish(node.collisionDetection_msg)
