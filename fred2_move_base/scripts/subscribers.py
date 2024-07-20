@@ -89,8 +89,8 @@ def odometry_config(node: Node):
                                 10)
 
     node.create_subscription(Int32, 
-                                '/esp_back/power/status/distance/ticks/left', 
-                                lambda msg: ticksLeft_callback(node, msg),
+                                '/esp_front/power/status/distance/ticks/right', 
+                                lambda msg: ticksRight_callback(node, msg),
                                 10)
     
     # self.create_subscription(Int32, 
@@ -208,8 +208,10 @@ def joy_config(node: Node):
 
 def joyConnected_callback(node: Node, connection_status): 
 
-    node.joy_connected = connection_status.data
+    # node.joy_connected = connection_status.data
 
+    node.joy_connected = True
+    
     node.last_joy_connected = node.get_clock().now()
 
 

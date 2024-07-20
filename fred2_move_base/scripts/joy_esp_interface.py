@@ -164,11 +164,11 @@ class JoyInterfaceNode(Node):
         vel_linear = self.joy_vel_linear * (self.MAX_VEL_JOY_LINEAR / self.MAX_VALUE_CONTROLLER)
         vel_angular = self.joy_vel_angular * (self.MAX_VEL_JOY_ANGULAR / self.MAX_VALUE_CONTROLLER)  
 
-        # Check if the joystick command timeout has been exceeded and the robot is in manual mode
-        if (current_time - self.last_joy_command_time).nanoseconds > self.JOY_TIMEOUT  and self.manual_mode: 
+        # # Check if the joystick command timeout has been exceeded and the robot is in manual mode
+        # if (current_time - self.last_joy_command_time).nanoseconds > self.JOY_TIMEOUT  and self.manual_mode: 
 
-            vel_linear = 0.0
-            vel_angular = 0.0
+        #     vel_linear = 0.0
+        #     vel_angular = 0.0
         
 
         # Create Twist message for velocity command
@@ -177,7 +177,8 @@ class JoyInterfaceNode(Node):
 
         # Publish velocity command only if in manual mode
         if self.manual_mode: 
-
+            
+            self.get_logger().info('PUBLICA VELOCIDADE')
             self.vel_pub.publish(self.cmd_vel)
 
 
