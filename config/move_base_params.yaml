@@ -1,4 +1,3 @@
-
 ################################################################################################################ 
 ########### LED MANAGER NODE
 ################################################################################################################
@@ -19,14 +18,12 @@
     yellow: 5                 #ffff00
     white: 0                  #ffffff
     
-    # Index for ghost and waypoints goals 
-    ghost_goal: 1
-    waypoint_goal: 0
-
     # Debug / test
-    use_sim_time: false     # Use simulation test
-    debug: false            # Enable debug prints 
-    unit_test: true        # Allow the node runs isolated 
+    use_sim_time: false       # Use simulation test
+    debug: true             # Enable debug prints 
+    use_global_param: true           # Allow the node runs isolated 
+
+    frequency: 6            # Node frequency 
 
 
 
@@ -38,17 +35,24 @@
   ros__parameters:
 
     # Ultrasonic sensors 
-    disable_ultrasonics: true
-    safe_distance: 100.0              # Stopping distance when detecting an object 
+    disable_ultrasonics: true                     # Toggle ultrasonic sensors on/off
+    obstacle_detection_threshold: 100.0           # Stopping distance when detecting an object 
 
     # Velocity limits 
-    max_angular_speed: 20.0           
-    max_linear_speed: 2.5
-    motor_brake_factor: -1
+    max_angular_speed: 20.0                     
+    max_linear_speed: 3.0
+    motor_brake_factor: -1                        # MUST be NEGATIVE
 
-    # Debug / test
-    use_sim_time: false               # Use simulation test
-    debug: false                      # Enable debug prints
+    cmd_vel_timeout: 15000000000                       # Timeout duration for cmd_vel messages
+
+    # Joystick 
+    joy_low_battery_threshold: 30                 # Threshold for low joystick battery
+    joy_connection_timeout: 150000                # Timeout duration for joystick connection
+
+    # Run, debug and test
+    use_sim_time: false                           # Use simulation test
+    debug: true                                  # Enable debug prints
+    frequency: 6
 
 
 ################################################################################################################ 
@@ -58,18 +62,21 @@
 /move_base/joy_esp_interface:
   ros__parameters:
 
+    joy_cmd_timeout: 150000                       # Timeout duration for cmd_vel messages
+
     # Joystick limits 
-    drift_analog_tolerance: 20
-    max_value_controller: 127
+    drift_analog_tolerance: 20                    # Min reading to consider it a command 
+    max_value_controller: 127                     # Max analog value from the joytstick 
     
     # Velocity limits 
     max_vel_joy_angular: 10.0
-    max_vel_joy_linear: 5.0
+    max_vel_joy_linear: 8.0
     
     # Debug / test
-    use_sim_time: false     # Use simulation test
-    debug: false            # Enable debug prints 
-    unit_test: true        # Allow the node runs isolated  
+    use_sim_time: false                           # Use simulation test
+    debug: true                                  # Enable debug prints 
+    use_global_param: true                               # Allow the node runs isolated  
+    frequency: 6                                # Node frequency 
 
 
 
@@ -86,10 +93,11 @@
     wheels_track: 0.38
     
     # Enconder config 
-    ticks_per_revolution: 7200
+    ticks_per_revolution: 1024
     
     # Debug / test
-    use_sim_time: false     # Use simulation test
-    debug: false            # Enable debug prints 
+    use_sim_time: false                          # Use simulation test
+    debug: true                                # Enable debug prints 
+    frequency: 6                                  # Node frequency 
 
-  
+    publish_odom_tf: True  
