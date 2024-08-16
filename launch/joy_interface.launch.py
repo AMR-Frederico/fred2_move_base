@@ -25,6 +25,8 @@ def generate_launch_description():
         name='joy_esp_interface',
         namespace='move_base',
         parameters=[config],
+        # output='screen', # ale debug
+        # emulate_tty=True, # ale debug
     )
 
 

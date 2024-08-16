@@ -174,7 +174,9 @@ def led_config(node: Node):
                             '/main_robot/autonomous_state',
                              lambda msg: autonomousMachine_callback(node, msg),
                               commum_qos_profile )
+    
 
+   
 ########################################################
 # --------------- JOY ESP INTERFACE 
 ########################################################
@@ -195,7 +197,15 @@ def joy_config(node: Node):
                                 '/machine_states/robot_state', 
                                 lambda msg: robotState_callback(node, msg), 
                                 commum_qos_profile)
+    
 
+
+    node.create_subscription(Odometry, 
+                                '/odom', 
+                                lambda msg: odom_position_callback(node, msg), 
+                                commum_qos_profile)
+    
+     
 
 
 ########################################################
@@ -245,6 +255,14 @@ def odom_callback(node: Node, msg): # get current robot vel
     
     node.robot_vel.linear.x = msg.twist.twist.linear.x
     node.robot_vel.angular.z = msg.twist.twist.angular.z
+
+
+def odom_position_callback(node: Node, msg): # get current robot vel
+    
+
+    node.position_x = msg.pose.pose.position.x
+    node.position_y = msg.pose.pose.position.y
+    node.position_z = msg.pose.pose.position.z
 
 
  
@@ -350,7 +368,6 @@ def robotState_callback(node: Node, msg):
 def joy_callback(node: Node, msg): 
 
     node.joy_msg = msg
-
     JoyInterfaceNode.joy_command(node)
 
 
@@ -358,3 +375,6 @@ def joy_callback(node: Node, msg):
 def autonomousMachine_callback(node: Node, msg): 
 
     node.autonomous_state = msg.data
+
+
+
