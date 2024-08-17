@@ -89,13 +89,13 @@ def odometry_config(node: Node):
                                 10)
 
     node.create_subscription(Int32, 
-                                '/esp_front/power/status/distance/ticks/right', 
+                                '/esp_back/power/status/distance/ticks/right', 
                                 lambda msg: ticksRight_callback(node, msg),
                                 10)
     
     # self.create_subscription(Int32, 
-    #                             '/esp_front/power/status/distance/ticks/right', 
-    #                             self.ticksRight_callback, 
+    #                             '/esp_front/power/status/distance/ticks/left', 
+    #                             self.ticksLeft_callback, 
     #                             10)
 
     # self.create_subscription(Int32, 
