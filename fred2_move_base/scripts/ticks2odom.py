@@ -16,6 +16,7 @@ from rclpy.context import Context
 from rclpy.node import Node
 from rclpy.parameter import Parameter
 from rclpy.executors import SingleThreadedExecutor
+from rclpy.signals import SignalHandlerOptions
 
 from tf2_ros import TransformBroadcaster
 
@@ -242,7 +243,7 @@ class OdometryNode(Node):
 
 if __name__ == '__main__': 
     
-    rclpy.init()
+    rclpy.init(args= None, signal_handler_options= SignalHandlerOptions.NO)
 
     odom_context = rclpy.Context()
     odom_context.init()
@@ -272,6 +273,8 @@ if __name__ == '__main__':
             rate.sleep()
         
     except KeyboardInterrupt:
+        
+        node.get_logger().warn(' ------------------------------------ DEACTIVATING NODE --------------------------------------')
         pass
 
     node.destroy_node()

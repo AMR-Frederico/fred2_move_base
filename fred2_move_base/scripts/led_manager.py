@@ -14,6 +14,7 @@ from typing import Any, List, Optional
 from rclpy.time import Duration
 from rclpy.node import Node
 from rclpy.parameter import Parameter
+from rclpy.signals import SignalHandlerOptions
 
 from rcl_interfaces.msg import Parameter
 
@@ -189,7 +190,7 @@ class LedManagerNode(Node):
 
 if __name__ == '__main__':
     
-    rclpy.init()
+    rclpy.init(args= None, signal_handler_options= SignalHandlerOptions.NO)
 
     node = LedManagerNode(
         'led_manager', 
@@ -210,6 +211,8 @@ if __name__ == '__main__':
             rate.sleep()
         
     except KeyboardInterrupt:
+        
+        node.get_logger().warn(' ------------------------------------ DEACTIVATING NODE --------------------------------------')
         pass
 
     LedManagerNode.destroy_node

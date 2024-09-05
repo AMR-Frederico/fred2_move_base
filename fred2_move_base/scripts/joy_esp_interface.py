@@ -14,6 +14,7 @@ from typing import List
 from rclpy.context import Context 
 from rclpy.node import Node
 from rclpy.parameter import Parameter
+from rclpy.signals import SignalHandlerOptions
 
 from std_msgs.msg import Bool
 from geometry_msgs.msg import Twist
@@ -188,7 +189,7 @@ class JoyInterfaceNode(Node):
 
 if __name__ == '__main__': 
     
-    rclpy.init()
+    rclpy.init(args= None, signal_handler_options= SignalHandlerOptions.NO)
 
     node = JoyInterfaceNode(
         node_name='joy_esp_interface',
@@ -208,7 +209,9 @@ if __name__ == '__main__':
             rate.sleep()
         
     except KeyboardInterrupt:
-        pass
 
+        node.get_logger().warn(' ------------------------------------ DEACTIVATING NODE --------------------------------------')
+        pass
+        
     rclpy.shutdown()
     thread.join()

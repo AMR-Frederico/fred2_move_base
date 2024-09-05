@@ -14,7 +14,8 @@ from typing import List, Optional
 from rclpy.context import Context 
 from rclpy.node import Node
 from rclpy.parameter import Parameter
-from rclpy.executors import SingleThreadedExecutor, MultiThreadedExecutor
+from rclpy.executors import SingleThreadedExecutor
+from rclpy.signals import SignalHandlerOptions
 
 from std_msgs.msg import Bool
 from geometry_msgs.msg import Twist
@@ -245,7 +246,7 @@ class SafeTwistNode(Node):
 
 if __name__ == '__main__':
     # Create a custom context for single thread and real-time execution
-    rclpy.init()
+    rclpy.init(args= None, signal_handler_options= SignalHandlerOptions.NO)
 
     safe_context = rclpy.Context()
     safe_context.init()
@@ -276,6 +277,8 @@ if __name__ == '__main__':
             rate.sleep()
         
     except KeyboardInterrupt:
+        
+        node.get_logger().warn(' ------------------------------------ DEACTIVATING NODE --------------------------------------')
         pass
 
     rclpy.shutdown()
