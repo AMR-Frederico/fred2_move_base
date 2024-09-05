@@ -217,7 +217,7 @@ class SafeTwistNode(Node):
         if self.stop_by_obstacle or self.user_abort_command or not self.joy_connected:
 
             self.robot_safety = False
-            self.get_logger().warn(f'Robot NOT safe -> obstacle: {self.stop_by_obstacle} | stop command: {self.user_abort_command} | joy connected: {self.joy_connected}')
+            # self.get_logger().warn(f'Robot NOT safe -> obstacle: {self.stop_by_obstacle} | stop command: {self.user_abort_command} | joy connected: {self.joy_connected}')
         
         else: 
             

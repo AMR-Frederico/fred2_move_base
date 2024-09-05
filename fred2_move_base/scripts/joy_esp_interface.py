@@ -161,33 +161,29 @@ class JoyInterfaceNode(Node):
         current_time = self.get_clock().now()
 
         # Calculate linear and angular velocities from joystick input
-        vel_linear = self.joy_vel_linear * (self.MAX_VEL_JOY_LINEAR / self.MAX_VALUE_CONTROLLER)
-        vel_angular = self.joy_vel_angular * (self.MAX_VEL_JOY_ANGULAR / self.MAX_VALUE_CONTROLLER)  
+        self.vel_linear = self.joy_vel_linear * (self.MAX_VEL_JOY_LINEAR / self.MAX_VALUE_CONTROLLER)
+        self.vel_angular = self.joy_vel_angular * (self.MAX_VEL_JOY_ANGULAR / self.MAX_VALUE_CONTROLLER)  
 
-        # # Check if the joystick command timeout has been exceeded and the robot is in manual mode
-        # if (current_time - self.last_joy_command_time).nanoseconds > self.JOY_TIMEOUT  and self.manual_mode: 
+        # Check if the joystick command timeout has been exceeded and the robot is in manual mode
+        if (current_time - self.last_joy_command_time).nanoseconds > self.JOY_TIMEOUT  and self.manual_mode: 
 
-        #     vel_linear = 0.0
-        #     vel_angular = 0.0
+            vel_linear = 0.0
+            vel_angular = 0.0
         
 
         # Create Twist message for velocity command
-        self.cmd_vel.linear.x = vel_linear
-        self.cmd_vel.angular.z = -1 * vel_angular   # Angular velocity correction
+        self.cmd_vel.linear.x = self.vel_linear
+        self.cmd_vel.angular.z = -1 * self.vel_angular   # Angular velocity correction
 
         # Publish velocity command only if in manual mode
         if self.manual_mode: 
             
-            self.get_logger().info('PUBLICA VELOCIDADE')
             self.vel_pub.publish(self.cmd_vel)
 
 
         if debug_mode or self.DEBUG:
              
-            self.get_logger().info(f'Velocity -> linear:{vel_linear} | angular:{vel_angular}\n')
-            self.get_logger().info(f'Reset odometry -> {self.reset_odom}')
-            self.get_logger().info(f'Switch mode -> {self.switch_mode}')
-            self.get_logger().info(f'Manual mode -> {self.manual_mode}')
+            debug.joy_interface(self)
 
 
 if __name__ == '__main__': 

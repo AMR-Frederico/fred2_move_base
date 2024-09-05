@@ -4,17 +4,33 @@ from rclpy.node import Node
 
 def safe_twist(node: Node): 
 
-    node.get_logger().warn(f'Robot safety -> {node.robot_safety}')
-    node.get_logger().info(f'Emergency mode -> user comand abort: {node.user_abort_command} | collision detected: {node.stop_by_obstacle}')
-    node.get_logger().info(f'Emergency mode -> joy connected: {node.joy_connected} | ultrasonics disabled: {node.DISABLE_ULTRASONICS}')
-    node.get_logger().info(f'Ultrasonics -> left: {node.left_ultrasonic_distance} | right: {node.right_ultrasonic_distance} | Back: {node.back_ultrasonic_distance}')
-    node.get_logger().info(f'Robot velocity -> linear: {node.robot_vel.linear.x} | angular: {node.robot_vel.angular.z}')
-    node.get_logger().info(f'Velocity command -> linear: {node.cmd_vel.linear.x} | angular: {node.cmd_vel.angular.z} | braking_factor: {node.deceleration_factor}')
-    node.get_logger().info(f'Safe velocity command -> linear: {node.cmd_vel_safe.linear.x} | angular: {node.cmd_vel_safe.angular.z}\n')
+    node.get_logger().info( 
+        
+        f"safety: {node.robot_safety} | abort: {node.user_abort_command} | collision: {node.stop_by_obstacle} | Joy -> status:{node.joy_connected}, battery: {node.joy_battery} | ultra -> disabled: {node.DISABLE_ULTRASONICS} | L: {node.left_ultrasonic_distance}, R: {node.right_ultrasonic_distance}, B: {node.back_ultrasonic_distance} | robot_vel -> x: {node.robot_vel.linear.x}, z: {node.robot_vel.angular.z} | braking: {node.deceleration_factor} | cmd_vel -> x: {node.cmd_vel.linear.x}, z: {node.cmd_vel.angular.z}, | safe/cmd_vel -> x: {node.cmd_vel_safe.linear.x}, z: {node.cmd_vel_safe.angular.z}"
+    )
 
 
-def odometry_config(node: Node): 
 
-    node.get_logger().info(f'Position -> x: {node.x_pos} | y: {node.y_pos} | theta: {node.theta}')
-    node.get_logger().info(f'Velocity -> x: {node.linear_vel_x} | y: {node.linear_vel_y} | theta: {node.angular_vel_theta}')
-    node.get_logger().info(f'Ticks -> left: {node.left_wheels_ticks} | right: {node.right_wheels_ticks} \n')
+def odometry(node: Node): 
+
+    node.get_logger().info(
+        
+        f'Position -> x: {node.x_pos} | y: {node.y_pos} | theta: {node.theta} | Velocity -> x: {node.linear_vel_x} | y: {node.linear_vel_y} | theta: {node.angular_vel_theta} | Ticks -> left: {node.left_wheels_ticks} | right: {node.right_wheels_ticks}'
+    )
+
+
+
+def joy_interface(node: Node): 
+                
+    node.get_logger().info(
+          
+        f'Velocity -> linear:{node.vel_linear} | angular:{node.vel_angular} | Reset odometry -> {node.reset_odom} | Switch mode -> {node.switch_mode} | Manual mode -> {node.manual_mode}'
+    )
+
+
+def led_manager(node: Node): 
+
+    node.get_logger().info(
+
+        f"Color: {node.led_color.data} | Debug color: {node.led_debug.data} | Collision alert: {node.collision_detected} | Stop command: {node.user_stop_command} | Joy connected: {node.joy_connected} | Ultrasonics disabled: {node.ultrasonic_disabled} | Robot state: {node.robot_state}"
+    )

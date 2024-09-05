@@ -21,7 +21,7 @@
     # Debug / test
     use_sim_time: false       # Use simulation test
     debug: true             # Enable debug prints 
-    use_global_param: true           # Allow the node runs isolated 
+    use_global_param: false           # Allow the node runs isolated 
 
     frequency: 6            # Node frequency 
 
@@ -75,7 +75,7 @@
     # Debug / test
     use_sim_time: false                           # Use simulation test
     debug: true                                  # Enable debug prints 
-    use_global_param: true                               # Allow the node runs isolated  
+    use_global_param: false                               # Allow the node runs isolated  
     frequency: 6                                # Node frequency 
 
 

@@ -169,7 +169,7 @@ class OdometryNode(Node):
 
         if debug_mode or self.DEBUG: 
 
-            debug.odometry_config(self)
+            debug.odometry(self)
             
 
 
@@ -274,6 +274,7 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         pass
 
+    node.destroy_node()
     rclpy.shutdown()
     thread.join()
 

@@ -184,13 +184,7 @@ class LedManagerNode(Node):
 
         if debug_mode or self.DEBUG: 
 
-            self.get_logger().info(f"Color: {self.led_color.data}")
-            self.get_logger().info(f"Debug color: {self.led_debug.data}")
-            self.get_logger().info(f"Collision alert: {self.collision_detected}")
-            self.get_logger().info(f"Stop command: {self.user_stop_command}")
-            self.get_logger().info(f"Joy connected: {self.joy_connected}")
-            self.get_logger().info(f"Ultrasonics disabled: {self.ultrasonic_disabled}")
-            self.get_logger().info(f"Robot state: {self.robot_state}\n")
+            debug.led_manager(self)
 
 
 if __name__ == '__main__':
@@ -211,13 +205,13 @@ if __name__ == '__main__':
     rate = node.create_rate(node.FREQUENCY)
 
     try: 
-        while rclpy.ok(): 
-            
+        while rclpy.ok():
             node.led_manager()
             rate.sleep()
         
     except KeyboardInterrupt:
         pass
 
+    LedManagerNode.destroy_node
     rclpy.shutdown()
     thread.join()
