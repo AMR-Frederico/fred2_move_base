@@ -3,6 +3,11 @@
 import rclpy
 import threading
 import sys
+import os
+import datetime
+from pathlib import Path
+
+from ament_index_python import get_package_share_directory
 
 import fred2_move_base.scripts.debug as debug
 import fred2_move_base.scripts.parameters as params 
@@ -22,6 +27,7 @@ from geometry_msgs.msg import Twist
 
 # Check for cli_args 
 debug_mode = '--debug' in sys.argv
+operation_time = str(datetime.datetime.now())
 
 class JoyInterfaceNode(Node):
 
@@ -32,9 +38,18 @@ class JoyInterfaceNode(Node):
 
     last_reset = 0 
     last_switch = 0
+    last_save_ghost_point_button = 0
+    last_save_goal_point_button = 0
 
     reset_odom = False
     switch_mode = False
+    save_ghost_point = False
+    save_goal_point = False
+
+    position_x = 999
+    position_y = 999
+    position_z = 999
+
 
     manual_mode = True
 
@@ -79,6 +94,8 @@ class JoyInterfaceNode(Node):
 
     
     def joy_command(self):
+
+
  
         # Process linear velocity command from joystick analog input
         if abs(self.joy_msg.axes[0]) > self.DRIFT_ANALOG_TOLERANCE: 
@@ -104,6 +121,8 @@ class JoyInterfaceNode(Node):
         # Process button commands
         reset_button = self.joy_msg.buttons[1]               # CIRCLE -> Button for resetting odometry
         switch_button = self.joy_msg.buttons[2]              # TRIANGLE -> Button for switching mode
+        save_ghost_point_button = self.joy_msg.buttons[2]    # ARROW_DOWN
+        save_goal_point_button = self.joy_msg.buttons[3]     # ARROW_UP
     
 
          # Check if reset button is pressed
@@ -129,12 +148,22 @@ class JoyInterfaceNode(Node):
             self.switch_robot_mode(False)               # If switch button is not pressed, do not switch mode
 
 
+        # save points joy btn triggered
+        if save_ghost_point_button > self.last_save_ghost_point_button:
+            self.save_point(False)
+
+        if save_goal_point_button > self.last_save_goal_point_button:
+            self.save_point(True)
+
+
          # Update time of last joystick command
         self.last_joy_command_time = self.get_clock().now()
         
          # Update last switch and reset button states for next iteration
         self.last_switch = switch_button
         self.last_reset = reset_button
+        self.last_save_ghost_point_button = save_ghost_point_button
+        self.last_save_goal_point_button = save_goal_point_button
 
 
 
@@ -155,9 +184,13 @@ class JoyInterfaceNode(Node):
         reset_msg = Bool()
         reset_msg.data = status
         self.resetOdom_pub.publish(reset_msg)        
+
     
 
     def main(self): 
+
+
+
 
         current_time = self.get_clock().now()
 
@@ -186,6 +219,14 @@ class JoyInterfaceNode(Node):
              
             debug.joy_interface(self)
 
+    def save_point(self, is_goal_point):
+
+        pre_path = Path(get_package_share_directory("fred2_move_base")).parent.parent.parent.parent / 'src' / 'fred2_move_base' / 'data' 
+        path = os.path.join(pre_path, "points_" + operation_time + ".txt")
+        f = open(path, "a")
+        
+        f.write("{" + f"{self.position_x}, {self.position_y}, {self.position_z}" + "}" + f" is_goal: {is_goal_point}" + "\n")
+        f.close()
 
 if __name__ == '__main__': 
     
@@ -195,14 +236,15 @@ if __name__ == '__main__':
         node_name='joy_esp_interface',
         cli_args=['--debug'],
         namespace='move_base',
-        enable_rosout=False)
+        enable_rosout=False
+        )
 
     # separete theread for main function 
     thread = threading.Thread(target=rclpy.spin, args=(node,), daemon=True)
     thread.start()
 
     rate = node.create_rate(node.FREQUENCY)
-
+    
     try: 
         while rclpy.ok(): 
             node.main()
