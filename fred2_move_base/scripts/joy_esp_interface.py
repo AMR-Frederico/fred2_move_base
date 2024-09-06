@@ -120,8 +120,8 @@ class JoyInterfaceNode(Node):
         # Process button commands
         reset_button = self.joy_msg.buttons[1]               # CIRCLE -> Button for resetting odometry
         switch_button = self.joy_msg.buttons[2]              # TRIANGLE -> Button for switching mode
-        save_ghost_point_button = self.joy_msg.buttons[3]    # ARROW_DOWN
-        save_goal_point_button = self.joy_msg.buttons[4]     # ARROW_UP
+        save_ghost_point_button = self.joy_msg.buttons[2]    # ARROW_DOWN
+        save_goal_point_button = self.joy_msg.buttons[3]     # ARROW_UP
     
 
          # Check if reset button is pressed
