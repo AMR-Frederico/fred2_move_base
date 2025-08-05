@@ -46,7 +46,7 @@ def generate_launch_description():
 
         TimerAction(period= 3.0, actions= [ 
 
-            LogInfo(msg=' ######################### LAUNCHING LED MANAGER #################################### '), 
+            LogInfo(msg=' ######################### LAUNCHING LED ODOMETRY #################################### '), 
             odom_node
         ]), 
     ])

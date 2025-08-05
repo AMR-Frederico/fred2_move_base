@@ -7,15 +7,17 @@ import transforms3d as tf3d     # angle manipulaton
 
 import fred2_move_base.scripts.debug as debug 
 import fred2_move_base.scripts.parameters as params 
-import fred2_move_base.scripts.publishers as publishers 
-import fred2_move_base.scripts.subscribers as subscribers 
+import fred2_move_base.scripts.qos as qos
 
 from typing import List, Optional
+
+from message_filters import Subscriber, ApproximateTimeSynchronizer
 
 from rclpy.context import Context 
 from rclpy.node import Node
 from rclpy.parameter import Parameter
-from rclpy.executors import SingleThreadedExecutor
+from rclpy.executors import MultiThreadedExecutor
+from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.signals import SignalHandlerOptions
 
 from tf2_ros import TransformBroadcaster
@@ -24,10 +26,14 @@ from math import pi, cos, sin
 
 from geometry_msgs.msg import TransformStamped
 from nav_msgs.msg import Odometry
+from std_msgs.msg import Int32, Bool
+from sensor_msgs.msg import Imu
 
 # Node execution arguments 
 debug_mode = '--debug' in sys.argv
 publish_tf = '--publish-tf' in sys.argv         # For robot localization isn't necessary publish the TF
+
+
 
 
 class OdometryNode(Node):
@@ -53,7 +59,8 @@ class OdometryNode(Node):
 
     reset_odom = False                  # Flag indicating whether to reset odometry
 
-    
+
+
     def __init__(self, 
                  node_name: str, 
                  *, # keyword-only argument
@@ -74,8 +81,34 @@ class OdometryNode(Node):
                          start_parameter_services=start_parameter_services, 
                          parameter_overrides=parameter_overrides)
         
-        subscribers.odometry_config(self)
-        publishers.odometry_config(self)
+        # --- Callback group for concurrent execution ---
+        self.odom_callback_group = ReentrantCallbackGroup()   
+
+        commum_qos_profile  = qos.general_configuration()
+        imu_qos_profile = qos.imu_configuration()
+
+        self.odom_pub = self.create_publisher(Odometry, '/odom', commum_qos_profile, callback_group=self.odom_callback_group)
+   
+        self.imu_sub = Subscriber(self, Imu, '/sensor/orientation/imu', qos_profile=imu_qos_profile)
+        
+        self.encoder_bl_sub = Subscriber(self, Int32, '/esp_back/power/status/distance/ticks/left')
+
+        self.encoder_br_sub = Subscriber(self, Int32, '/esp_back/power/status/distance/ticks/right')
+        
+        self.reset_sub = self.create_subscription(Bool, 
+                        '/odom/reset', 
+                        lambda msg: self.odomReset_callback(node, msg), 
+                        commum_qos_profile)
+        
+        self.sync = ApproximateTimeSynchronizer(
+                    [self.imu_sub, self.encoder_bl_sub, self.encoder_br_sub],       # The topics you're syncing. Each one is a message_filters.Subscriber.
+                    queue_size= 10,                                                 # Max number of recent messages to store per topic.
+                    slop=0.3,                                                       # Allowed timestamp difference
+                    allow_headerless=True
+        )
+
+        self.sync.registerCallback(self.synced_callback)         # Callback with syncronized callbacks
+    
         params.odometry_config(self)
 
 
@@ -87,6 +120,24 @@ class OdometryNode(Node):
 
 
         self.add_on_set_parameters_callback(params.odom_parameters_callback)
+
+
+    def synced_callback(self, imu_msg:Imu, encoder_left:Int32, encoder_right:Int32):
+
+        self.get_logger().info(
+        f"Synced! IMU: {imu_msg.header.stamp.sec}.{imu_msg.header.stamp.nanosec}, "
+        f"Encoder left: {encoder_left.stamp.sec}.{encoder_left.stamp.nanosec}"
+        f"Encoder right: {encoder_right.stamp.sec}.{encoder_right.stamp.nanosec}"
+    )
+        
+        quat = imu_msg.orientation
+        imu_quat = [quat.w, quat.x, quat.y, quat.z]
+        _, _, yaw = tf3d.euler.quat2euler(imu_quat)
+
+        self.robot_heading = yaw
+
+        self.left_wheels_ticks = encoder_left.data
+        self.right_wheels_ticks = encoder_right.data
 
 
     def calculate_odometry(self): 
@@ -258,7 +309,7 @@ if __name__ == '__main__':
     )
 
     # Make the execution in real time 
-    executor = SingleThreadedExecutor(context=odom_context)
+    executor = MultiThreadedExecutor(context=odom_context)
     executor.add_node(node)
 
     # create a separate thread for the callbacks and another for the main function 

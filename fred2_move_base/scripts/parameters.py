@@ -186,37 +186,37 @@ def odometry_config(node: Node):
     node.declare_parameters(
         namespace='',
         parameters=[
-            ('base_link_offset', None, 
+            ('base_link_offset', 0.08, 
                 ParameterDescriptor(
                     description='Offset of the base link from the ground in meters', 
                     type=ParameterType.PARAMETER_DOUBLE)),
 
-            ('wheels_radius', None, 
+            ('wheels_radius', 0.075, 
                 ParameterDescriptor(
                     description='Radius of the wheels in meters', 
                     type=ParameterType.PARAMETER_DOUBLE)),
 
-            ('wheels_track', None, 
+            ('wheels_track', 0.38, 
                 ParameterDescriptor(
                     description='Distance between the centers of the left and right wheels in meters', 
                     type=ParameterType.PARAMETER_DOUBLE)),
 
-            ('ticks_per_revolution', None, 
+            ('ticks_per_revolution', 1024, 
                 ParameterDescriptor(
                     description='Number of encoder ticks per revolution of the wheel', 
                     type=ParameterType.PARAMETER_INTEGER)),
 
-            ('frequency', None, 
+            ('frequency', 6, 
                 ParameterDescriptor(
                     description='Node frequency', 
                     type=ParameterType.PARAMETER_INTEGER)),
 
-            ('publish_odom_tf', None, 
+            ('publish_odom_tf', True, 
                 ParameterDescriptor(
                     description='Allows the node to publish odom tf ', 
                     type=ParameterType.PARAMETER_BOOL)),
 
-            ('debug', None, 
+            ('debug', True, 
                 ParameterDescriptor(
                     description='Enable debug prints for troubleshooting', 
                     type=ParameterType.PARAMETER_BOOL)),

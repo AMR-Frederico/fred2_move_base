@@ -78,42 +78,42 @@ def safe_config(node: Node):
 # --------------- ODOMETRY
 ########################################################
 
-def odometry_config(node: Node): 
+# def odometry_config(node: Node): 
 
-    global commum_qos_profile, imu_qos_profile
+#     global commum_qos_profile, imu_qos_profile
 
-    # --------------- Encoders sensors (from the firmware)
-    node.create_subscription(Int32, 
-                                '/esp_back/power/status/distance/ticks/left', 
-                                lambda msg: ticksLeft_callback(node, msg),
-                                10)
+#     # --------------- Encoders sensors (from the firmware)
+#     node.create_subscription(Int32, 
+#                                 '/esp_back/power/status/distance/ticks/left', 
+#                                 lambda msg: ticksLeft_callback(node, msg),
+#                                 10)
 
-    node.create_subscription(Int32, 
-                                '/esp_back/power/status/distance/ticks/right', 
-                                lambda msg: ticksRight_callback(node, msg),
-                                10)
+#     node.create_subscription(Int32, 
+#                                 '/esp_back/power/status/distance/ticks/right', 
+#                                 lambda msg: ticksRight_callback(node, msg),
+#                                 10)
     
-    # self.create_subscription(Int32, 
-    #                             '/esp_front/power/status/distance/ticks/left', 
-    #                             self.ticksLeft_callback, 
-    #                             10)
+#     # self.create_subscription(Int32, 
+#     #                             '/esp_front/power/status/distance/ticks/left', 
+#     #                             self.ticksLeft_callback, 
+#     #                             10)
 
-    # self.create_subscription(Int32, 
-    #                             '/esp_front/power/status/distance/ticks/right', 
-    #                             self.ticksRight_callback, 
-    #                             10)
+#     # self.create_subscription(Int32, 
+#     #                             '/esp_front/power/status/distance/ticks/right', 
+#     #                             self.ticksRight_callback, 
+#     #                             10)
     
-    # --------------- IMU sensors (from the firmware)
-    node.create_subscription(Imu, 
-                                '/sensor/orientation/imu', 
-                                lambda msg: heading_callback(node, msg), 
-                                imu_qos_profile)
+#     # --------------- IMU sensors (from the firmware)
+#     node.create_subscription(Imu, 
+#                                 '/sensor/orientation/imu', 
+#                                 lambda msg: heading_callback(node, msg), 
+#                                 imu_qos_profile)
     
-    # --------------- Request to reset the odometry
-    node.create_subscription(Bool, 
-                                '/odom/reset', 
-                                lambda msg: odomReset_callback(node, msg), 
-                                commum_qos_profile)
+#     # --------------- Request to reset the odometry
+#     node.create_subscription(Bool, 
+#                                 '/odom/reset', 
+#                                 lambda msg: odomReset_callback(node, msg), 
+#                                 commum_qos_profile)
 
 
 
@@ -284,30 +284,6 @@ def abort_callback(node: Node, user_command): # when received a emergency brake 
     SafeTwistNode.abort_command(node)
 
 
-# Encoder ticks -----------------------------------
-
-def ticksLeft_callback(node: Node, ticks_msg): 
-
-    node.left_wheels_ticks = ticks_msg.data
-
-
-def ticksRight_callback(node: Node, ticks_msg): 
-    
-    node.right_wheels_ticks = ticks_msg.data
-
-
-# Imu callback ------------------------------------
-
-def heading_callback(node: Node, imu_msg): 
-    
-    node.robot_quaternion = imu_msg
-
-    # get the yaw angle
-    node.robot_heading = tf3d.euler.quat2euler([node.robot_quaternion.orientation.w, 
-                                                node.robot_quaternion.orientation.x, 
-                                                node.robot_quaternion.orientation.y, 
-                                                node.robot_quaternion.orientation.z])[2]
-    
 # Reset odometry command -------------------------
 
 def odomReset_callback(node: Node, reset_msg):
