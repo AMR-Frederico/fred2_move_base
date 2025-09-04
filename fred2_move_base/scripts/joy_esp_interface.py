@@ -13,6 +13,7 @@ import fred2_move_base.scripts.debug as debug
 import fred2_move_base.scripts.parameters as params 
 import fred2_move_base.scripts.publishers as publishers 
 import fred2_move_base.scripts.subscribers as subscribers 
+import fred2_move_base.scripts.qos as qos 
 
 from typing import List
 
@@ -23,6 +24,9 @@ from rclpy.signals import SignalHandlerOptions
 
 from std_msgs.msg import Bool
 from geometry_msgs.msg import Twist
+from std_msgs.msg import Int16
+
+commum_qos = qos.general_configuration()
 
 
 # Check for cli_args 
@@ -91,6 +95,11 @@ class JoyInterfaceNode(Node):
         
         self.last_joy_command_time = self.get_clock().now()
 
+        self.ledColor_pub = self.create_publisher(Int16, '/cmd/led_strip/color', commum_qos)
+
+
+
+
 
     
     def joy_command(self):
@@ -130,6 +139,12 @@ class JoyInterfaceNode(Node):
 
             self.get_logger().info('Reset odometry')
             self.reset_robot_odom(True)
+
+            color_msg = Int16()
+            color_msg.data = 6
+            self.ledColor_pub.publish(color_msg)
+
+
 
         else: 
 
