@@ -26,6 +26,7 @@ from geometry_msgs.msg import Pose2D
 debug_mode = '--debug' in sys.argv
 
 
+
 class LedManagerNode(Node): 
 
     led_color = Int16()
@@ -51,6 +52,9 @@ class LedManagerNode(Node):
 
 
     odom_reset = False              # Flag indicating whether the odometry needs to be reset
+
+
+    led_goal_reached = False
 
 
     LED_ON_TIME = Duration(seconds=0.5)  # Duration for which the LED signal is kept on (in seconds)
