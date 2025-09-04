@@ -20,8 +20,8 @@
     
     # Debug / test
     use_sim_time: false       # Use simulation test
-    debug: true             # Enable debug prints 
-    use_global_param: false           # Allow the node runs isolated 
+    debug: false             # Enable debug prints 
+    use_global_param: true           # Allow the node runs isolated 
 
     frequency: 6            # Node frequency 
 
@@ -39,11 +39,11 @@
     obstacle_detection_threshold: 100.0           # Stopping distance when detecting an object 
 
     # Velocity limits 
-    max_angular_speed: 20.0                     
-    max_linear_speed: 3.0
+    max_angular_speed: 12.0
+    max_linear_speed: 2.0
     motor_brake_factor: -1                        # MUST be NEGATIVE
 
-    cmd_vel_timeout: 15000000000                       # Timeout duration for cmd_vel messages
+    cmd_vel_timeout: 150000000                       # Timeout duration for cmd_vel messages
 
     # Joystick 
     joy_low_battery_threshold: 30                 # Threshold for low joystick battery
@@ -51,7 +51,7 @@
 
     # Run, debug and test
     use_sim_time: false                           # Use simulation test
-    debug: true                                  # Enable debug prints
+    debug: false                                  # Enable debug prints
     frequency: 6
 
 
@@ -69,13 +69,13 @@
     max_value_controller: 127                     # Max analog value from the joytstick 
     
     # Velocity limits 
-    max_vel_joy_angular: 10.0
+    max_vel_joy_angular: 20.0
     max_vel_joy_linear: 8.0
     
     # Debug / test
     use_sim_time: false                           # Use simulation test
-    debug: true                                  # Enable debug prints 
-    use_global_param: false                               # Allow the node runs isolated  
+    debug: false                                 # Enable debug prints 
+    use_global_param: true                               # Allow the node runs isolated  
     frequency: 6                                # Node frequency 
 
 
@@ -97,7 +97,7 @@
     
     # Debug / test
     use_sim_time: false                          # Use simulation test
-    debug: true                                # Enable debug prints 
+    debug: false                               # Enable debug prints 
     frequency: 6                                  # Node frequency 
 
     publish_odom_tf: True  
