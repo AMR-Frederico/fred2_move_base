@@ -84,12 +84,12 @@ def odometry_config(node: Node):
 
     # --------------- Encoders sensors (from the firmware)
     node.create_subscription(Int32, 
-                                '/esp_back/power/status/distance/ticks/left', 
+                                '/back/power/encoder/ticks/left', 
                                 lambda msg: ticksLeft_callback(node, msg),
                                 10)
 
     node.create_subscription(Int32, 
-                                '/esp_back/power/status/distance/ticks/right', 
+                                '/back/power/encoder/ticks/right', 
                                 lambda msg: ticksRight_callback(node, msg),
                                 10)
     
