@@ -1,6 +1,0 @@
-{0.0, 0.0, 0.0} is_goal: False
-{0.0, 0.0, 0.0} is_goal: False
-{0.0, 0.0, 0.0} is_goal: False
-{0.0, 0.0, 0.0} is_goal: False
-{0.0, 0.0, 0.0} is_goal: False
-{0.0, 0.0, 0.0} is_goal: False
